@@ -57,7 +57,7 @@ export default function LostFound(){
     <header><span className="pill">Campus help desk</span><h1 className="mt-3 text-4xl md:text-5xl">Lost & found</h1><p className="mt-3 max-w-2xl leading-7 text-ink-2">Post something you lost or found on campus. Message the poster to arrange a safe handoff.</p></header>
     {notice&&<p role="status" className="rounded border border-secondary bg-secondary/10 p-3 text-sm">{notice}</p>}
     {error&&<p role="alert" className="rounded border border-error bg-error-wash p-3 text-sm text-error">{error}</p>}
-    <section className="panel p-6"><h2 className="text-2xl">Create a post</h2><p className="mt-1 text-sm text-ink-2">Anyone with a UniNest account can post.</p>
+    {s.canPost?<section className="panel p-6"><h2 className="text-2xl">Create a post</h2><p className="mt-1 text-sm text-ink-2">Verified students can post lost-and-found items.</p>
       <form onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2">
         <select className="field" value={form.type} onChange={e=>update('type',e.target.value)}><option value="lost">I lost something</option><option value="found">I found something</option></select>
         <input className="field" placeholder="Item name" value={form.title} onChange={e=>update('title',e.target.value)} required/>
@@ -66,7 +66,7 @@ export default function LostFound(){
         <div className="sm:col-span-2"><label className="label" htmlFor="lost-photo">Photo (optional, max 2MB)</label><input id="lost-photo" type="file" accept="image/*" className="block text-sm" onChange={photoChange}/>{form.photo&&<img src={form.photo} alt="Item preview" className="mt-3 h-24 w-24 rounded object-cover"/>}</div>
         <button className="btn-primary sm:col-span-2">Publish post</button>
       </form>
-    </section>
+    </section>:<p className="panel p-4 text-sm text-ink-2">Only students verified with an <b>@sudoon.ac.in</b> email can create Lost & Found posts. You can still claim items and message other users.</p>}
     <div className="flex flex-wrap gap-2"><button className={filter==='all'?'btn-primary':'btn-outline'} onClick={()=>setFilter('all')}>All active posts</button><button className={filter==='lost'?'btn-primary':'btn-outline'} onClick={()=>setFilter('lost')}>Lost</button><button className={filter==='found'?'btn-primary':'btn-outline'} onClick={()=>setFilter('found')}>Found</button></div>
     {!visible.length?<p className="panel p-6 text-center text-ink-2">No active posts in this view.</p>:<section className="grid gap-5 lg:grid-cols-2">
       {visible.map(item=>{const owner=person(item.by),mine=item.by===user.uid,requested=item.claimRequests?.some(x=>x.uid===user.uid);return <article key={item.id} className={`card overflow-hidden ${item.claimed?'opacity-75':''}`}>

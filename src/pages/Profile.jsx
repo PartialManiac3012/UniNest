@@ -2,8 +2,8 @@ import {useState} from 'react'
 import {Link,useParams} from 'react-router-dom'
 import {useAuth} from '../auth.jsx'
 import {useSocial} from '../social.jsx'
-import {Avatar,Chip} from '../components/ui.jsx'
-import {INTERESTS} from '../data.js'
+import {Avatar,Chip,VerifiedBadge} from '../components/ui.jsx'
+import {INTERESTS,STREAMS} from '../data.js'
 const MAX_AVATAR_BYTES=2*1024*1024
 const toDataUrl=file=>new Promise((resolve,reject)=>{
   const reader=new FileReader()
@@ -15,7 +15,7 @@ export default function Profile(){
   const {uid}=useParams(),{user,updateProfile}=useAuth(),s=useSocial(),p=s.person(uid),own=uid===user.uid
   const [edit,setEdit]=useState(false),[d,setD]=useState(null),[err,setErr]=useState('')
   if(!p)return <p className="panel p-6">No student with the ID @{uid}. <Link to="/discover" className="underline">Back to Discover</Link></p>
-  const start=()=>{setD({bio:p.bio||'',skills:p.skills||'',interests:p.interests||[],avatar:p.avatar||''});setErr('');setEdit(true)}
+  const start=()=>{setD({bio:p.bio||'',skills:p.skills||'',interests:p.interests||[],avatar:p.avatar||'',stream:p.stream||''});setErr('');setEdit(true)}
   const onAvatar=async e=>{
     const file=e.target.files?.[0]
     if(!file)return
@@ -27,7 +27,7 @@ export default function Profile(){
   const tog=i=>setD(x=>({...x,interests:x.interests.includes(i)?x.interests.filter(y=>y!==i):[...x.interests,i]}))
   const posts=s.posts.filter(x=>x.by===uid),teams=s.teams.filter(x=>x.by===uid),c=s.conns.includes(uid)
   return <div className="mx-auto max-w-3xl space-y-6">
-   <header className="panel flex flex-wrap items-center gap-4 p-6"><Avatar p={p} size={64}/><div className="flex-1"><h1 className="text-3xl">{p.name}</h1><p className="text-sm text-ink-2">@{p.uid} · {p.year} · {p.college}</p></div>
+   <header className="panel flex flex-wrap items-center gap-4 p-6"><Avatar p={p} size={64}/><div className="flex-1"><h1 className="text-3xl">{p.name}<VerifiedBadge verified={p.verified}/></h1><p className="text-sm text-ink-2">@{p.uid} · {p.year} · {p.college}{p.stream&&<> · {p.stream}</>}</p></div>
     {own?<button className="btn-outline" onClick={edit?()=>setEdit(false):start}>{edit?'Cancel':'Edit profile'}</button>:<div className="flex gap-2"><button onClick={()=>s.toggleConnect(uid)} aria-pressed={c} className={c?'btn-outline':'btn-primary'}>{c?'Connected':'Connect'}</button><Link to={`/messages?to=${uid}`} className="btn-outline">Message</Link></div>}</header>
    {edit?<form onSubmit={e=>{e.preventDefault();updateProfile(d);setEdit(false)}} className="panel space-y-4 p-6">
     {err&&<p role="alert" className="rounded border border-error bg-error-wash p-3 text-sm text-error">{err}</p>}
@@ -40,6 +40,7 @@ export default function Profile(){
     </div></div>
     <div><label className="label" htmlFor="bio">Bio</label><textarea id="bio" rows={3} maxLength={200} className="field" value={d.bio} onChange={e=>setD({...d,bio:e.target.value})}/></div>
     <div><label className="label" htmlFor="sk">Skills (comma separated)</label><input id="sk" className="field" value={d.skills} onChange={e=>setD({...d,skills:e.target.value})}/></div>
+    <div><label className="label" htmlFor="profile-stream">Stream</label><select id="profile-stream" className="field" value={d.stream} onChange={e=>setD({...d,stream:e.target.value})}><option value="">Select your stream</option>{STREAMS.map(stream=><option key={stream}>{stream}</option>)}</select></div>
     <div><span className="label">Interests</span><div className="flex flex-wrap gap-2">{INTERESTS.map(i=><Chip type="button" key={i} on={d.interests.includes(i)} onClick={()=>tog(i)}>{i}</Chip>)}</div></div>
     <button className="btn-primary" disabled={!d.interests.length}>Save profile</button></form>
    :<section className="panel space-y-3 p-6"><p>{p.bio||(own?'Add a bio so people know what you are into.':'No bio yet.')}</p>

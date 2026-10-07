@@ -30,7 +30,7 @@ export default function ClubEvents(){
     <header><span className="pill">Club events</span><h1 className="mt-3 text-4xl md:text-5xl">Events by registered clubs</h1><p className="mt-3 max-w-2xl leading-7 text-ink-2">Discover campus events, discuss them with other students, and submit your details to join.</p></header>
     {notice&&<p role="status" className="rounded border border-secondary bg-secondary/10 p-3 text-sm">{notice}</p>}
     {error&&<p role="alert" className="rounded border border-error bg-error-wash p-3 text-sm text-error">{error}</p>}
-    {isClubMember?<section className="panel p-6"><h2 className="text-2xl">Publish a club event</h2><p className="mt-1 text-sm text-ink-2">Your registered club email is authorized to publish.</p>
+    {isClubMember&&s.canPost?<section className="panel p-6"><h2 className="text-2xl">Publish a club event</h2><p className="mt-1 text-sm text-ink-2">Your registered club email is authorized to publish.</p>
       <form onSubmit={publish} className="mt-4 grid gap-4 sm:grid-cols-2">
         <input className="field" placeholder="Event title" value={draft.title} onChange={e=>update('title',e.target.value)} required/>
         <input className="field" placeholder="Venue" value={draft.venue} onChange={e=>update('venue',e.target.value)} required/>
@@ -38,7 +38,7 @@ export default function ClubEvents(){
         <input className="field" type="time" value={draft.time} onChange={e=>update('time',e.target.value)} required/>
         <textarea className="field sm:col-span-2" rows="3" placeholder="What is this event about?" value={draft.description} onChange={e=>update('description',e.target.value)} required/>
         <button className="btn-primary sm:col-span-2">Publish event</button>
-      </form></section>:<p className="panel p-4 text-sm text-ink-2">Only registered club email accounts can publish events. You can still comment and join any event below.</p>}
+      </form></section>:<p className="panel p-4 text-sm text-ink-2">{isClubMember?'Only verified @sudoon.ac.in accounts can publish club events.':'Only registered club email accounts can publish events.'} You can still comment and join any event below.</p>}
     <section className="grid gap-5 lg:grid-cols-2">
       {clubEvents.map(event=><article key={event.id} className="card p-5">
         <div className="flex items-start justify-between gap-3"><div><span className="pill-green">{event.club}</span><h2 className="mt-3 text-2xl">{event.title}</h2></div><span className="text-right text-sm text-ink-2">{event.date}<br/>{event.time}</span></div>

@@ -17,6 +17,7 @@
   .pill-gold{@apply pill bg-gold text-ink font-bold}
   .rule-double{border-top:1px solid #dbc0be;box-shadow:0 3px 0 -2px #fdf8f5,0 3px 0 -1px #dbc0be}
   .material-symbols-outlined{font-size:20px;line-height:1;vertical-align:middle}
+  .verified-badge{display:inline-flex;width:1rem;height:1rem;margin-left:.35rem;align-items:center;justify-content:center;vertical-align:middle;border-radius:9999px;background:#2563eb;color:#fff;font-family:Arial,sans-serif;font-size:.68rem;font-weight:700;line-height:1;transform:translateY(-.08em)}
 }
 @layer components{
   .field{@apply w-full rounded border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none placeholder:text-outline focus:border-primary-container}

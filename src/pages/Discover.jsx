@@ -1,7 +1,7 @@
 import {useState} from 'react'
 import {Link} from 'react-router-dom'
 import {useSocial} from '../social.jsx'
-import {Avatar,Chip} from '../components/ui.jsx'
+import {Avatar,Chip,VerifiedBadge} from '../components/ui.jsx'
 import {INTERESTS} from '../data.js'
 export default function Discover(){
   const s=useSocial(),[q,setQ]=useState(''),[sel,setSel]=useState([])
@@ -12,7 +12,7 @@ export default function Discover(){
    <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by interest">{INTERESTS.map(i=><Chip key={i} on={sel.includes(i)} onClick={()=>tog(i)}>{i}</Chip>)}</div>
    {!rows.length&&<p className="panel p-6 text-center">No students match. Clear a filter or search for a different skill.</p>}
    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{rows.map(p=>{const c=s.conns.includes(p.uid),sh=s.shared(p);return <article key={p.uid} className="card flex flex-col p-4">
-    <div className="flex items-center gap-3"><Avatar p={p} size={44}/><div className="leading-tight"><Link to={`/u/${p.uid}`} className="font-serif text-lg font-semibold hover:text-primary-container">{p.name}</Link><div className="text-xs text-ink-2">{p.year} · {p.college}{p.sample&&' · sample'}</div></div></div>
+    <div className="flex items-center gap-3"><Avatar p={p} size={44}/><div className="leading-tight"><Link to={`/u/${p.uid}`} className="font-serif text-lg font-semibold hover:text-primary-container">{p.name}<VerifiedBadge verified={p.verified}/></Link><div className="text-xs text-ink-2">{p.year} · {p.college}{p.sample&&' · sample'}</div></div></div>
     <p className="mt-3 text-sm text-ink-2">{p.bio||'No bio yet.'}</p>
     <div className="mt-3 flex flex-wrap gap-1">{p.interests.map(i=><span key={i} className={sh.includes(i)?'pill-green':'pill'}>{i}</span>)}</div>
     {p.skills&&<p className="mt-2 text-xs text-ink-2">Skills: {p.skills}</p>}

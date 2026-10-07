@@ -18,3 +18,4 @@ export const notices=[
 ]
 export const INTERESTS=['Hackathons','AI/ML','Web dev','App dev','Design','Robotics','Startups','Open source','Data science','Gaming','Music','Photography','Sports','Finance','Public speaking','Research']
 export const EVENT_TYPES=['Hackathon','Study group','Project','Sports & cultural','Other']
+export const STREAMS=['BTech CSE Core','BTech CSE Data Science','BTech CSE AI/ML','BTech Cyber Security','BPharma','BBA','BCOM','Agriculture','BCA','BTech Electrical','BTech Civil','BTech Mechanical']

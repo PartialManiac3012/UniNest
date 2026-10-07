@@ -13,12 +13,14 @@ import ClubEvents from './pages/ClubEvents.jsx'
 import LostFound from './pages/LostFound.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
+import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 export default function App(){
   const guard=el=><RequireAuth>{el}</RequireAuth>
   return <WelcomeScreen><Routes><Route element={<Layout/>}>
     <Route index element={<Gateway/>}/>
     <Route path="login" element={<GuestOnly><Login/></GuestOnly>}/>
     <Route path="signup" element={<GuestOnly><Signup/></GuestOnly>}/>
+    <Route path="privacy-policy" element={<PrivacyPolicy/>}/>
     <Route path="feed" element={guard(<Feed/>)}/>
     <Route path="discover" element={guard(<Discover/>)}/>
     <Route path="partners" element={guard(<Partners/>)}/>

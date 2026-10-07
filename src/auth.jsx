@@ -9,17 +9,19 @@ const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new T
 const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const norm=e=>e.trim().toLowerCase()
 const ADMIN_EMAILS=['admin@uninest.example']
+export const isStudentEmail=email=>norm(email).endsWith('@sudoon.ac.in')
 export const idFromEmail=email=>{
   const base=norm(email).split('@')[0].replace(/[^a-z0-9._]/g,'').slice(0,20)||'student'
   const taken=new Set(read('uninest.users',[]).map(u=>u.uid));let id=base,n=1
   while(taken.has(id))id=base+(++n);return id}
 export function AuthProvider({children}){
   const [user,setUser]=useState(()=>{const u=read('uninest.session',null);return read('uninest.users',[]).find(x=>x.uid===u)||null})
-  const strip=({hash,...u})=>u
+  const strip=({hash,...u})=>({...u,verified:u.verified||isStudentEmail(u.email)})
   const isBanned=email=>read('uninest.bannedEmails',[]).includes(norm(email))
   const api={
     user:user&&strip(user),
     isAdmin:!!user&&ADMIN_EMAILS.includes(user.email),
+    isVerifiedStudent:!!user&&isStudentEmail(user.email),
     previewId:idFromEmail,
     sendCode(email){
       if(!EMAIL.test(norm(email)))throw new Error('Enter a valid email address.')
@@ -33,12 +35,12 @@ export function AuthProvider({children}){
       if(Date.now()>p.exp)throw new Error('This code expired. Request a new one.')
       if(p.code!==code.trim())throw new Error('That code is not right. Check it and try again.')
       write('uninest.pending',{...p,ok:true})},
-    async createAccount({email,name,college,year,password,interests=[],avatar='',phone=''}) {
+    async createAccount({email,name,college,year,stream,password,interests=[],avatar='',phone=''}) {
       const p=read('uninest.pending',null)
       if(!p?.ok||p.email!==norm(email))throw new Error('Verify your email first.')
       if(password.length<8)throw new Error('Use at least 8 characters for your password.')
       if(isBanned(email))throw new Error('This email address has been banned from UniNest.')
-      const u={uid:idFromEmail(email),email:norm(email),name:name.trim(),college:college.trim(),year,interests,avatar,phone:phone.trim(),skills:'',bio:'',hash:await sha(password),created:Date.now()}
+      const u={uid:idFromEmail(email),email:norm(email),name:name.trim(),college:college.trim(),year,stream,interests,avatar,phone:phone.trim(),verified:isStudentEmail(email),skills:'',bio:'',hash:await sha(password),created:Date.now()}
       write('uninest.users',[...read('uninest.users',[]),u]);localStorage.removeItem('uninest.pending')
       write('uninest.session',u.uid);setUser(u)},
     async login(idOrEmail,password){

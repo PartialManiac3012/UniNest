@@ -2,7 +2,7 @@ import {useState} from 'react'
 import {Link,useNavigate} from 'react-router-dom'
 import {useAuth} from '../auth.jsx'
 import {Icon} from '../components/Layout.jsx'
-import {INTERESTS} from '../data.js'
+import {INTERESTS,STREAMS} from '../data.js'
 import {Chip} from '../components/ui.jsx'
 const steps=['Email','Verify','Profile'],years=['1st year','2nd year','3rd year','4th year','Postgraduate']
 const MAX_AVATAR_BYTES=2*1024*1024
@@ -14,8 +14,8 @@ const toDataUrl=file=>new Promise((resolve,reject)=>{
 })
 export default function Signup(){
   const {sendCode,verifyCode,createAccount,previewId}=useAuth(),nav=useNavigate()
-  const [step,setStep]=useState(0),[demo,setDemo]=useState(''),[err,setErr]=useState(''),[busy,setBusy]=useState(false),[show,setShow]=useState(false)
-  const [f,setF]=useState({email:'',code:'',name:'',college:'',year:years[0],password:'',confirm:'',interests:[],avatar:'',phone:''})
+  const [step,setStep]=useState(0),[demo,setDemo]=useState(''),[err,setErr]=useState(''),[busy,setBusy]=useState(false),[show,setShow]=useState(false),[accepted,setAccepted]=useState(false)
+  const [f,setF]=useState({email:'',code:'',name:'',college:'',year:years[0],stream:'',password:'',confirm:'',interests:[],avatar:'',phone:''})
   const set=k=>e=>setF({...f,[k]:e.target.value})
   const onAvatar=async e=>{
     const file=e.target.files?.[0]
@@ -31,6 +31,7 @@ export default function Signup(){
   const verify=run(async()=>{verifyCode(f.email,f.code);setStep(2)})
   const create=run(async()=>{
     if(f.password!==f.confirm)throw new Error('The two passwords do not match.')
+    if(!accepted)throw new Error('Please read and accept the Privacy Policy before creating your UniNest ID.')
     await createAccount(f);nav('/feed',{replace:true})})
   return <div className="grid gap-10 py-4 lg:grid-cols-2">
     <div><h1 className="text-4xl md:text-5xl">Create your UniNest ID</h1>
@@ -64,10 +65,12 @@ export default function Signup(){
         <div><label className="label" htmlFor="nm">Full name</label><input id="nm" className="field" autoComplete="name" value={f.name} onChange={set('name')} required/></div>
         <div className="grid gap-4 sm:grid-cols-2"><div><label className="label" htmlFor="cl">College</label><input id="cl" className="field" value={f.college} onChange={set('college')} required/></div>
           <div><label className="label" htmlFor="yr">Year</label><select id="yr" className="field" value={f.year} onChange={set('year')}>{years.map(y=><option key={y}>{y}</option>)}</select></div></div>
+        <div><label className="label" htmlFor="stream">Stream</label><select id="stream" className="field" value={f.stream} onChange={set('stream')} required><option value="">Select your stream</option>{STREAMS.map(stream=><option key={stream}>{stream}</option>)}</select></div>
         <div><label className="label" htmlFor="ph">Phone number</label><input id="ph" type="tel" className="field" autoComplete="tel" placeholder="+91 98765 43210" value={f.phone} onChange={set('phone')} required/></div>
         <div><span className="label">Pick your interests (at least one)</span><div className="flex flex-wrap gap-2">{INTERESTS.map(i=><Chip type="button" key={i} on={f.interests.includes(i)} onClick={()=>setF({...f,interests:f.interests.includes(i)?f.interests.filter(x=>x!==i):[...f.interests,i]})}>{i}</Chip>)}</div></div>
         <div><label className="label" htmlFor="p1">Password (8+ characters)</label><div className="relative"><input id="p1" type={show?'text':'password'} className="field pr-10" autoComplete="new-password" value={f.password} onChange={set('password')} required/>
           <button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)} className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-2"><Icon n={show?'visibility_off':'visibility'}/></button></div></div>
         <div><label className="label" htmlFor="p2">Confirm password</label><input id="p2" type={show?'text':'password'} className="field" autoComplete="new-password" value={f.confirm} onChange={set('confirm')} required/></div>
-        <button className="btn-primary w-full" disabled={busy||!f.name||!f.college||f.password.length<8||!f.interests.length}>{busy?'Creating…':'Create my account'}</button></form>}
+        <label className="flex items-start gap-2 text-sm text-ink-2"><input type="checkbox" className="mt-1 accent-primary-container" checked={accepted} onChange={e=>setAccepted(e.target.checked)} required/><span>I have read and agree to the <Link to="/privacy-policy" className="font-semibold text-primary-container underline underline-offset-4">Privacy Policy</Link>.</span></label>
+        <button className="btn-primary w-full" disabled={busy||!f.name||!f.college||!f.stream||f.password.length<8||!f.interests.length||!accepted}>{busy?'Creating…':'Create my account'}</button></form>}
     </div></div>}
