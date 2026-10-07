@@ -47,6 +47,7 @@ export function SocialProvider({children}){
     addClubEvent:event=>{if(!isClubMember)throw new Error('Only registered club email accounts can publish events.');upd(d=>{d.clubEvents.unshift({id:rid(),club:user.name,clubEmail:user.email,comments:[],joins:[],...event});return d})},
     addEventComment:(id,text)=>upd(d=>{const e=pick(d.clubEvents,id);if(e)e.comments.push({id:rid(),by:me,text,t:Date.now()});return d}),
     joinClubEvent:(id,details)=>upd(d=>{const e=pick(d.clubEvents,id);if(e&&!e.joins.some(x=>x.uid===me))e.joins.push({uid:me,...details,t:Date.now()});return d}),
+    addLostFound:item=>upd(d=>{d.lostFound??=[];d.lostFound.unshift({id:rid(),by:me,created:Date.now(),claimed:false,claimRequests:[],...item});return d}),
     requestLostFoundClaim:id=>upd(d=>{d.lostFound??=[];const item=pick(d.lostFound,id);if(!item||item.by===me||item.type!=='found')throw new Error('Only another student can claim a found item.');if(!item.claimRequests)item.claimRequests=[];if(!item.claimRequests.some(x=>x.uid===me))item.claimRequests.push({uid:me,t:Date.now()});return d}),
     claimLostFound:id=>upd(d=>{d.lostFound??=[];const item=pick(d.lostFound,id);if(!item||item.by!==me)throw new Error('Only the person who found this item can mark it claimed.');if(!item.claimRequests?.length)throw new Error('Wait for the person who lost this item to submit a claim first.');item.claimed=true;item.claimedAt=Date.now();return d}),
     shared:p=>p.interests.filter(i=>user?.interests?.includes(i))}
