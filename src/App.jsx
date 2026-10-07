@@ -1,6 +1,5 @@
 import {Routes,Route,Navigate} from 'react-router-dom'
 import Layout from './components/Layout.jsx'
-import WelcomeScreen from './components/WelcomeScreen.jsx'
 import {RequireAuth,GuestOnly} from './auth.jsx'
 import Gateway from './pages/Gateway.jsx'
 import Feed from './pages/Feed.jsx'
@@ -16,7 +15,7 @@ import Signup from './pages/Signup.jsx'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 export default function App(){
   const guard=el=><RequireAuth>{el}</RequireAuth>
-  return <WelcomeScreen><Routes><Route element={<Layout/>}>
+  return <Routes><Route element={<Layout/>}>
     <Route index element={<Gateway/>}/>
     <Route path="login" element={<GuestOnly><Login/></GuestOnly>}/>
     <Route path="signup" element={<GuestOnly><Signup/></GuestOnly>}/>
@@ -31,5 +30,5 @@ export default function App(){
     <Route path="events" element={guard(<Events/>)}/>
     <Route path="club-events" element={guard(<ClubEvents/>)}/>
     <Route path="lost-found" element={guard(<LostFound/>)}/>
-    <Route path="*" element={<Navigate to="/" replace/>}/></Route></Routes></WelcomeScreen>
+    <Route path="*" element={<Navigate to="/" replace/>}/></Route></Routes>
 }
