@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from 'react'
 import {NavLink,Link,Outlet,useLocation,useNavigate} from 'react-router-dom'
 import {useAuth} from '../auth.jsx'
 export const Icon=({n,className=''})=><span className={`material-symbols-outlined ${className}`} aria-hidden="true">{n}</span>
-const nav=[['/feed','Feed'],['/discover','Discover'],['/partners','Find partners'],['/events','Events'],['/messages','Messages']]
+const nav=[['/','Gateway'],['/discover','Directory'],['/feed','Activities'],['/events','Events']]
 const Section=({title,links})=><div><h4 className="kicker mb-3">{title}</h4><ul className="space-y-2 text-sm">{links.map(l=><li key={l}><a href="#" className="hover:text-primary-container hover:underline">{l}</a></li>)}</ul></div>
 export default function Layout(){
   const {user,logout}=useAuth(),go=useNavigate(),q=useRef(null),{pathname}=useLocation(),[open,setOpen]=useState(false)
@@ -17,16 +17,18 @@ export default function Layout(){
           <span className="kicker text-[10px]">Find your people on campus</span></span></Link>
         <label className="hidden md:flex items-center gap-2 border border-outline-variant rounded px-3 py-1.5 w-64 focus-within:border-primary-container">
           <Icon n="search" className="text-ink-2"/><input ref={q} placeholder="Search courses, resources" className="bg-transparent text-sm outline-none flex-1 min-w-0"/><kbd className="text-[10px] text-ink-2">⌘K</kbd></label>
-                {user?<><div className="hidden sm:block text-right leading-tight"><div className="text-xs font-semibold">{user.name}</div><div className="text-[11px] text-ink-2">@{user.uid}</div></div>
-        <span className="grid h-9 w-9 place-items-center rounded-full bg-primary-wash text-primary-container text-xs font-bold" aria-hidden="true">{user.name.trim()[0]?.toUpperCase()}</span>
-        <button onClick={()=>{logout();go('/')}} className="btn-outline !py-1.5">Log out</button></>
-        :<><Link to="/login" className="text-sm font-semibold hover:text-primary-container">Log in</Link><Link to="/signup" className="btn-primary !py-1.5">Create ID</Link></>}
+        {user?<><div className="hidden sm:block text-right leading-tight"><div className="text-xs font-semibold">{user.name}</div><div className="text-[11px] text-ink-2">@{user.uid}</div></div>
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-primary-wash text-primary-container text-xs font-bold" aria-hidden="true">{user.name.trim()[0]?.toUpperCase()}</span>
+          <button onClick={()=>{logout();go('/')}} className="btn-outline !py-1.5">Log out</button></>
+          :<><Link to="/login" className="text-sm font-semibold hover:text-primary-container">Log in</Link><Link to="/signup" className="btn-primary !py-1.5">Create ID</Link></>}
         <button className="md:hidden p-1" aria-label="Menu" aria-expanded={open} onClick={()=>setOpen(!open)}><Icon n={open?'close':'menu'}/></button>
-      </div></header>
-    <nav className={`${open?'block':'hidden'} md:block border-b border-outline-variant bg-surface-low`}>
+      </div>
+    </header>
+    <nav className={`${open?'block':'hidden'} md:block border-b border-outline-variant bg-surface-low`} aria-label="Campus navigation">
       <div className="mx-auto max-w-[1200px] px-4 md:px-12 flex flex-col md:flex-row md:items-center">
-        {(user?nav:[['/','Home']]).map(([to,l])=><NavLink key={to} to={to}  className={({isActive})=>`px-3 py-2.5 text-xs font-semibold uppercase tracking-wider border-b-2 md:border-b-2 ${isActive?'bg-primary-container text-surface border-primary-container':'border-transparent hover:text-primary-container'}`}>{l}</NavLink>)}
-        </div></nav>
+        {nav.map(([to,label])=><NavLink key={to} to={to} end={to==='/'} className={({isActive})=>`px-5 py-3 text-sm font-bold uppercase tracking-wider border-b-2 md:px-5 ${isActive?'bg-primary-container text-surface border-primary-container':'border-transparent text-ink-2 hover:text-primary-container'}`}>{label}</NavLink>)}
+      </div>
+    </nav>
     <main className="flex-1 mx-auto w-full max-w-[1200px] px-4 md:px-12 py-8 space-y-10"><Outlet/></main>
     <footer className="border-t border-outline-variant bg-surface-low mt-10"><div className="mx-auto max-w-[1200px] px-4 md:px-12 py-10 grid gap-8 md:grid-cols-4">
       <div><div className="font-serif text-xl font-semibold">UniNest</div><p className="mt-2 text-sm text-ink-2 max-w-xs">Find study groups, project partners and hackathon squads on your campus.</p></div>
