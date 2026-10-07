@@ -1,0 +1,24 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+@layer base{
+  body{@apply bg-surface text-ink font-sans antialiased}
+  h1,h2,h3,h4{@apply font-serif tracking-tight}
+  :focus-visible{outline:2px solid #611816;outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+}
+@layer components{
+  .kicker{@apply font-sans text-[11px] font-bold uppercase tracking-[.08em] text-ink-2}
+  .card{@apply bg-surface border border-outline-variant rounded transition-colors hover:border-primary}
+  .panel{@apply bg-surface-container border border-outline-variant rounded-lg}
+  .btn{@apply inline-flex items-center justify-center gap-2 rounded px-5 py-2.5 text-sm font-semibold transition-colors}
+  .btn-primary{@apply btn bg-primary-container text-surface hover:bg-primary}
+  .btn-outline{@apply btn border border-primary-container text-primary-container hover:bg-primary-wash}
+  .pill{@apply inline-flex items-center rounded-full bg-primary-wash px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-primary-container}
+  .pill-green{@apply pill bg-secondary text-white}
+  .pill-gold{@apply pill bg-gold text-ink font-bold}
+  .rule-double{border-top:1px solid #dbc0be;box-shadow:0 3px 0 -2px #fdf8f5,0 3px 0 -1px #dbc0be}
+  .material-symbols-outlined{font-size:20px;line-height:1;vertical-align:middle}
+}
+@layer components{
+  .field{@apply w-full rounded border border-outline-variant bg-surface px-3 py-2.5 text-sm outline-none placeholder:text-outline focus:border-primary-container}
+  .label{@apply mb-1 block text-xs font-semibold text-ink-2}
+}
