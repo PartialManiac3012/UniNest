@@ -6,7 +6,7 @@ It includes a floating **Little Help** AI assistant powered by **NVIDIA Nemotron
 
 ---
 
-## 🚀 Features
+##  Features
 
 - College community dashboard
 - Student directory
@@ -19,7 +19,7 @@ It includes a floating **Little Help** AI assistant powered by **NVIDIA Nemotron
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 
@@ -45,7 +45,7 @@ It includes a floating **Little Help** AI assistant powered by **NVIDIA Nemotron
 
 ---
 
-# 📦 Installation
+#  Installation
 
 ## 1. Clone or extract the project
 
@@ -61,7 +61,7 @@ npm install
 
 ---
 
-# 🤖 Little Help AI Setup
+#  Little Help AI Setup
 
 Little Help uses OpenRouter to communicate with NVIDIA Nemotron 3.5 Lightning.
 
@@ -124,7 +124,7 @@ The `.env` file is ignored by Git.
 
 ---
 
-# ▶️ Running UniNest
+#  Running UniNest
 
 You need to run both the frontend and AI backend.
 
@@ -170,7 +170,7 @@ If your operating system has issues with the combined command, use Option A.
 
 ---
 
-# 💬 Using Little Help
+#  Using Little Help
 
 After the website loads, look at the **bottom-right corner**.
 
@@ -208,7 +208,7 @@ http://localhost:3001
 
 ---
 
-# 📁 Important Files
+#  Important Files
 
 ```text
 UniNest-main/
@@ -237,7 +237,7 @@ UniNest-main/
 
 ---
 
-# 🔐 Security
+#  Security
 
 **Never put the OpenRouter key in:**
 
@@ -260,7 +260,7 @@ If you accidentally publish your API key to GitHub, revoke it immediately and cr
 
 ---
 
-# 🧪 Troubleshooting
+#  Troubleshooting
 
 ## Chatbot says it cannot connect
 
@@ -340,7 +340,7 @@ and:
 
 ---
 
-# 🧠 How Little Help Works
+#  How Little Help Works
 
 Little Help currently acts as a UniNest-focused AI assistant.
 
@@ -370,7 +370,7 @@ For future development, Supabase can be connected through controlled backend too
 
 ---
 
-# 🌐 Production Deployment
+#  Production Deployment
 
 Before deploying:
 
@@ -384,7 +384,7 @@ Before deploying:
 
 ---
 
-# 📜 Available Scripts
+#  Available Scripts
 
 ```bash
 npm run dev
@@ -418,7 +418,7 @@ Previews the production frontend build locally.
 
 ---
 
-# 👨‍💻 Development
+#  Development
 
 When modifying Little Help:
 
