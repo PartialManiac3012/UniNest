@@ -26,8 +26,8 @@ const readPhoto=file=>new Promise((resolve,reject)=>{
 })
 
 export default function LostFound(){
-  const {user}=useAuth()
-  const {lostFound,person,addLostFound,requestLostFoundClaim,claimLostFound}=useSocial()
+  const {user,isAdmin}=useAuth()
+  const {lostFound,person,addLostFound,deleteLostFound,requestLostFoundClaim,claimLostFound,canPost}=useSocial()
   const [form,setForm]=useState(empty),[filter,setFilter]=useState('all'),[error,setError]=useState(''),[notice,setNotice]=useState('')
   const update=(key,value)=>setForm({...form,[key]:value})
   const photoChange=async e=>{
@@ -57,7 +57,7 @@ export default function LostFound(){
     <header><span className="pill">Campus help desk</span><h1 className="mt-3 text-4xl md:text-5xl">Lost & found</h1><p className="mt-3 max-w-2xl leading-7 text-ink-2">Post something you lost or found on campus. Message the poster to arrange a safe handoff.</p></header>
     {notice&&<p role="status" className="rounded border border-secondary bg-secondary/10 p-3 text-sm">{notice}</p>}
     {error&&<p role="alert" className="rounded border border-error bg-error-wash p-3 text-sm text-error">{error}</p>}
-    {s.canPost?<section className="panel p-6"><h2 className="text-2xl">Create a post</h2><p className="mt-1 text-sm text-ink-2">Verified students can post lost-and-found items.</p>
+    {canPost?<section className="panel p-6"><h2 className="text-2xl">Create a post</h2><p className="mt-1 text-sm text-ink-2">Verified students can post lost-and-found items.</p>
       <form onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2">
         <select className="field" value={form.type} onChange={e=>update('type',e.target.value)}><option value="lost">I lost something</option><option value="found">I found something</option></select>
         <input className="field" placeholder="Item name" value={form.title} onChange={e=>update('title',e.target.value)} required/>
@@ -69,10 +69,10 @@ export default function LostFound(){
     </section>:<p className="panel p-4 text-sm text-ink-2">Only students verified with an <b>@sudoon.ac.in</b> email can create Lost & Found posts. You can still claim items and message other users.</p>}
     <div className="flex flex-wrap gap-2"><button className={filter==='all'?'btn-primary':'btn-outline'} onClick={()=>setFilter('all')}>All active posts</button><button className={filter==='lost'?'btn-primary':'btn-outline'} onClick={()=>setFilter('lost')}>Lost</button><button className={filter==='found'?'btn-primary':'btn-outline'} onClick={()=>setFilter('found')}>Found</button></div>
     {!visible.length?<p className="panel p-6 text-center text-ink-2">No active posts in this view.</p>:<section className="grid gap-5 lg:grid-cols-2">
-      {visible.map(item=>{const owner=person(item.by),mine=item.by===user.uid,requested=item.claimRequests?.some(x=>x.uid===user.uid);return <article key={item.id} className={`card overflow-hidden ${item.claimed?'opacity-75':''}`}>
+      {visible.map(item=>{const owner=person(item.by),mine=item.by===user.uid,requested=item.claimRequests?.some(x=>x.uid===user.uid),canDelete=mine||isAdmin;return <article key={item.id} className={`card overflow-hidden ${item.claimed?'opacity-75':''}`}>
         {item.photo&&<img src={item.photo} alt={item.title} className="h-56 w-full object-cover"/>}
         <div className="space-y-3 p-5"><div className="flex items-start justify-between gap-3"><div className="flex gap-2"><span className={item.type==='lost'?'pill':'pill-green'}>{item.type==='lost'?'Lost':'Found'}</span>{item.claimed&&<span className="pill-gold">Claimed</span>}</div><span className="text-xs text-ink-2">{ago(item.created)}</span></div>
-          <h2 className="text-2xl">{item.title}</h2><p className="text-sm leading-6 text-ink-2">{item.description}</p><p className="text-sm"><b>Location:</b> {item.location}</p>
+          <div className="flex items-start justify-between gap-3"><h2 className="text-2xl">{item.title}</h2>{canDelete&&<button className="btn-outline !px-2 !py-1 text-xs text-error" onClick={()=>{if(window.confirm('Delete this Lost & Found post?')){try{deleteLostFound(item.id);setNotice('Post deleted.')}catch(x){setError(x.message)}}}}>Delete</button>}</div><p className="text-sm leading-6 text-ink-2">{item.description}</p><p className="text-sm"><b>Location:</b> {item.location}</p>
           <div className="flex items-center gap-2 border-t border-outline-variant pt-3 text-sm"><Avatar p={owner} size={32}/><span>Posted by <b>{owner?.name||item.by}</b></span></div>
           {!item.claimed&&item.type==='found'&&!mine&&<button className="btn-primary w-full" disabled={requested} onClick={()=>requestClaim(item.id)}>{requested?'Claim request sent':'Claim this item'}</button>}
           {!item.claimed&&!mine&&<Link to={`/messages?to=${item.by}`} className="btn-outline block w-full text-center">{item.type==='found'?'Message finder':'Message person who lost it'}</Link>}

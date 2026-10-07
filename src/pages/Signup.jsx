@@ -4,7 +4,7 @@ import {useAuth} from '../auth.jsx'
 import {Icon} from '../components/Layout.jsx'
 import {INTERESTS,STREAMS} from '../data.js'
 import {Chip} from '../components/ui.jsx'
-const steps=['Email','Verify','Profile'],years=['1st year','2nd year','3rd year','4th year','Postgraduate']
+const steps=['Email','Profile'],years=['1st year','2nd year','3rd year','4th year','Postgraduate']
 const MAX_AVATAR_BYTES=2*1024*1024
 const toDataUrl=file=>new Promise((resolve,reject)=>{
   const r=new FileReader()
@@ -13,8 +13,8 @@ const toDataUrl=file=>new Promise((resolve,reject)=>{
   r.readAsDataURL(file)
 })
 export default function Signup(){
-  const {sendCode,verifyCode,createAccount,previewId}=useAuth(),nav=useNavigate()
-  const [step,setStep]=useState(0),[demo,setDemo]=useState(''),[err,setErr]=useState(''),[busy,setBusy]=useState(false),[show,setShow]=useState(false),[accepted,setAccepted]=useState(false)
+  const {createAccount,previewId}=useAuth(),nav=useNavigate()
+  const [step,setStep]=useState(0),[err,setErr]=useState(''),[busy,setBusy]=useState(false),[show,setShow]=useState(false),[accepted,setAccepted]=useState(false)
   const [f,setF]=useState({email:'',code:'',name:'',college:'',year:years[0],stream:'',password:'',confirm:'',interests:[],avatar:'',phone:''})
   const set=k=>e=>setF({...f,[k]:e.target.value})
   const onAvatar=async e=>{
@@ -27,8 +27,7 @@ export default function Signup(){
     setF(v=>({...v,avatar}))
   }
   const run=fn=>async e=>{e.preventDefault();setErr('');setBusy(true);try{await fn()}catch(x){setErr(x.message)}setBusy(false)}
-  const send=run(async()=>{setDemo(sendCode(f.email));setStep(1)})
-  const verify=run(async()=>{verifyCode(f.email,f.code);setStep(2)})
+  const send=run(async()=>{if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email.trim()))throw new Error('Enter a valid email address.');setStep(1)})
   const create=run(async()=>{
     if(f.password!==f.confirm)throw new Error('The two passwords do not match.')
     if(!accepted)throw new Error('Please read and accept the Privacy Policy before creating your UniNest ID.')
@@ -45,13 +44,8 @@ export default function Signup(){
         <div><label className="label" htmlFor="em">Email address</label><input id="em" type="email" className="field" autoComplete="email" placeholder="you@college.edu" value={f.email} onChange={set('email')} required/></div>
         {f.email.includes('@')&&<p className="text-sm text-ink-2">Your ID will be <b className="text-ink">@{previewId(f.email)}</b></p>}
         <button className="btn-primary w-full" disabled={busy||!f.email}>{busy?'Sending…':'Send verification code'}</button></form>}
-      {step===1&&<form onSubmit={verify} className="space-y-4" noValidate><h2 className="text-2xl">Check your email</h2>
-        <p className="text-sm text-ink-2">We sent a 6-digit code to <b className="text-ink">{f.email}</b>. It expires in 10 minutes.</p>
-        <div className="rounded border border-gold bg-gold-wash p-3 text-sm" role="note"><b>Demo mode:</b> no email service is connected yet, so your code is shown here: <b className="tracking-widest">{demo}</b></div>
-        <div><label className="label" htmlFor="cd">Verification code</label><input id="cd" inputMode="numeric" maxLength={6} className="field tracking-[.4em]" autoComplete="one-time-code" value={f.code} onChange={set('code')} required/></div>
-        <button className="btn-primary w-full" disabled={busy||f.code.length<6}>Verify email</button>
-        <div className="flex justify-between text-sm"><button type="button" className="underline underline-offset-4" onClick={()=>{setStep(0);setErr('')}}>Change email</button><button type="button" className="underline underline-offset-4" onClick={()=>{try{setDemo(sendCode(f.email));setErr('')}catch(x){setErr(x.message)}}}>Send a new code</button></div></form>}
-      {step===2&&<form onSubmit={create} className="space-y-4" noValidate><h2 className="text-2xl">Set up your profile</h2>
+      {step===1&&<form onSubmit={create} className="space-y-4" noValidate><h2 className="text-2xl">Set up your profile</h2>
+        <p className="text-sm text-ink-2">After signup, Supabase will send a confirmation link to <b className="text-ink">{f.email}</b>.</p>
         <p className="text-sm text-ink-2">Your ID: <b className="text-ink">@{previewId(f.email)}</b></p>
         <div><span className="label">Profile photo (optional)</span>
           <div className="flex items-center gap-4">

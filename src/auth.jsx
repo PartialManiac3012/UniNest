@@ -1,66 +1,110 @@
-import {createContext,useContext,useState} from 'react'
+import {createContext,useContext,useEffect,useState} from 'react'
 import {Navigate,useLocation} from 'react-router-dom'
-// Frontend-only demo auth: accounts live in this browser's localStorage.
-// Swap the functions below for real API calls when you have a backend.
+import {supabase} from './lib/supabase.js'
+
 const Ctx=createContext(null)
 const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
 const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v))
-const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('')
-const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const norm=e=>e.trim().toLowerCase()
 const ADMIN_EMAILS=['admin@uninest.example']
-export const isStudentEmail=email=>norm(email).endsWith('@sudoon.ac.in')
+const MANUALLY_VERIFIED_EMAILS=['kumar.aditya30122006@gmail.com']
+
+export const isStudentEmail=email=>norm(email||'').endsWith('@sudoon.ac.in')
+export const isVerifiedEmail=email=>isStudentEmail(email)||MANUALLY_VERIFIED_EMAILS.includes(norm(email||''))
 export const idFromEmail=email=>{
   const base=norm(email).split('@')[0].replace(/[^a-z0-9._]/g,'').slice(0,20)||'student'
   const taken=new Set(read('uninest.users',[]).map(u=>u.uid));let id=base,n=1
-  while(taken.has(id))id=base+(++n);return id}
+  while(taken.has(id))id=base+(++n)
+  return id
+}
+const profileFromUser=(authUser,local={})=>{
+  const meta=authUser?.user_metadata||{}
+  return {...local,authId:authUser?.id,uid:meta.uid||local.uid||idFromEmail(authUser.email||''),email:authUser.email||local.email||'',name:meta.name||local.name||'',college:meta.college||local.college||'',year:meta.year||local.year||'',stream:meta.stream||local.stream||'',interests:meta.interests||local.interests||[],avatar:meta.avatar||local.avatar||'',phone:meta.phone||local.phone||'',bio:meta.bio||local.bio||'',skills:meta.skills||local.skills||'',verified:isVerifiedEmail(authUser.email)}
+}
+const saveLocalProfile=profile=>{
+  const users=read('uninest.users',[])
+  write('uninest.users',[...users.filter(item=>item.uid!==profile.uid),profile])
+}
+const saveSupabaseProfile=async profile=>{
+  if(!supabase||!profile.authId)return
+  const {error}=await supabase.from('profiles').upsert({
+    id:profile.authId,uid:profile.uid,email:profile.email,name:profile.name,college:profile.college,
+    year:profile.year,stream:profile.stream,interests:profile.interests,avatar:profile.avatar,
+    phone:profile.phone,bio:profile.bio,skills:profile.skills
+  })
+  if(error)throw new Error(`Could not sync your profile with Supabase: ${error.message}`)
+}
+
 export function AuthProvider({children}){
-  const [user,setUser]=useState(()=>{const u=read('uninest.session',null);return read('uninest.users',[]).find(x=>x.uid===u)||null})
-  const strip=({hash,...u})=>({...u,verified:u.verified||isStudentEmail(u.email)})
+  const [user,setUser]=useState(null)
+  const [loading,setLoading]=useState(true)
   const isBanned=email=>read('uninest.bannedEmails',[]).includes(norm(email))
-  const api={
-    user:user&&strip(user),
-    isAdmin:!!user&&ADMIN_EMAILS.includes(user.email),
-    isVerifiedStudent:!!user&&isStudentEmail(user.email),
-    previewId:idFromEmail,
-    sendCode(email){
-      if(!EMAIL.test(norm(email)))throw new Error('Enter a valid email address.')
-      if(isBanned(email))throw new Error('This email address has been banned from UniNest.')
-      if(read('uninest.users',[]).some(u=>u.email===norm(email)))throw new Error('An account with this email already exists. Log in instead.')
-      const code=String(Math.floor(100000+Math.random()*900000))
-      write('uninest.pending',{email:norm(email),code,exp:Date.now()+10*60*1000});return code},
-    verifyCode(email,code){
-      const p=read('uninest.pending',null)
-      if(!p||p.email!==norm(email))throw new Error('Request a new code first.')
-      if(Date.now()>p.exp)throw new Error('This code expired. Request a new one.')
-      if(p.code!==code.trim())throw new Error('That code is not right. Check it and try again.')
-      write('uninest.pending',{...p,ok:true})},
-    async createAccount({email,name,college,year,stream,password,interests=[],avatar='',phone=''}) {
-      const p=read('uninest.pending',null)
-      if(!p?.ok||p.email!==norm(email))throw new Error('Verify your email first.')
-      if(password.length<8)throw new Error('Use at least 8 characters for your password.')
-      if(isBanned(email))throw new Error('This email address has been banned from UniNest.')
-      const u={uid:idFromEmail(email),email:norm(email),name:name.trim(),college:college.trim(),year,stream,interests,avatar,phone:phone.trim(),verified:isStudentEmail(email),skills:'',bio:'',hash:await sha(password),created:Date.now()}
-      write('uninest.users',[...read('uninest.users',[]),u]);localStorage.removeItem('uninest.pending')
-      write('uninest.session',u.uid);setUser(u)},
-    async login(idOrEmail,password){
-      const k=norm(idOrEmail).replace(/^@/,''),h=await sha(password)
-      const u=read('uninest.users',[]).find(x=>x.email===k||x.uid===k)
-      if(u&&isBanned(u.email))throw new Error('This email address has been banned from UniNest.')
-      if(!u||u.hash!==h)throw new Error('ID/email or password is incorrect.')
-      write('uninest.session',u.uid);setUser(u)},
-    updateProfile(patch){const us=read('uninest.users',[]).map(u=>u.uid===user.uid?{...u,...patch}:u);write('uninest.users',us);setUser(us.find(u=>u.uid===user.uid))},
-    banEmail:email=>{
-      if(!user||!ADMIN_EMAILS.includes(user.email))throw new Error('Only admins can ban email addresses.')
-      const banned=[...new Set([...read('uninest.bannedEmails',[]),norm(email)])]
-      write('uninest.bannedEmails',banned)
-      const remaining=read('uninest.users',[]).filter(u=>u.email!==norm(email))
-      write('uninest.users',remaining)
-    },
-    logout(){localStorage.removeItem('uninest.session');setUser(null)}}
-  return <Ctx.Provider value={api}>{children}</Ctx.Provider>}
+
+  useEffect(()=>{
+    if(!supabase){setLoading(false);return}
+    let mounted=true
+    supabase.auth.getSession().then(({data})=>{
+      if(mounted)setUser(data.session?.user?profileFromUser(data.session.user):null)
+      if(mounted)setLoading(false)
+    })
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
+      if(mounted)setUser(session?.user?profileFromUser(session.user):null)
+    })
+    return()=>{mounted=false;subscription.unsubscribe()}
+  },[])
+
+  const createAccount=async({email,name,college,year,stream,password,interests=[],avatar='',phone=''})=>{
+    if(!supabase)throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.')
+    if(isBanned(email))throw new Error('This email address has been banned from UniNest.')
+    if(password.length<8)throw new Error('Use at least 8 characters for your password.')
+    const uid=idFromEmail(email)
+    const {data,error}=await supabase.auth.signUp({email:norm(email),password,options:{data:{uid,name:name.trim(),college:college.trim(),year,stream,interests,avatar,phone:phone.trim(),bio:'',skills:''}}})
+    if(error)throw new Error(error.message)
+    if(!data.session)throw new Error('Account created. Check your email and click the confirmation link before logging in.')
+    const profile=profileFromUser(data.user)
+    saveLocalProfile(profile)
+    await saveSupabaseProfile(profile)
+    setUser(profile)
+  }
+  const login=async(idOrEmail,password)=>{
+    if(!supabase)throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.')
+    const key=norm(idOrEmail).replace(/^@/,'')
+    const local=read('uninest.users',[]).find(x=>x.uid===key)
+    const email=local?.email||key
+    if(isBanned(email))throw new Error('This email address has been banned from UniNest.')
+    const {data,error}=await supabase.auth.signInWithPassword({email,password})
+    if(error)throw new Error(error.message)
+    const profile=profileFromUser(data.user,local)
+    saveLocalProfile(profile)
+    await saveSupabaseProfile(profile)
+    setUser(profile)
+  }
+  const updateProfile=async patch=>{
+    if(!user)return
+    if(!supabase)throw new Error('Supabase is not configured.')
+    const {data,error}=await supabase.auth.updateUser({data:patch})
+    if(error)throw new Error(error.message)
+    const profile=profileFromUser(data.user,{...user,...patch})
+    saveLocalProfile(profile)
+    await saveSupabaseProfile(profile)
+    setUser(profile)
+  }
+  const banEmail=email=>{
+    if(!user||!ADMIN_EMAILS.includes(user.email))throw new Error('Only admins can ban email addresses.')
+    const banned=[...new Set([...read('uninest.bannedEmails',[]),norm(email)])]
+    write('uninest.bannedEmails',banned)
+  }
+  const logout=async()=>{
+    if(supabase)await supabase.auth.signOut()
+    setUser(null)
+  }
+  const api={user,isAdmin:!!user&&ADMIN_EMAILS.includes(user.email),isVerifiedStudent:!!user&&isVerifiedEmail(user.email),previewId:idFromEmail,createAccount,login,updateProfile,banEmail,logout,loading}
+  return <Ctx.Provider value={api}>{children}</Ctx.Provider>
+}
 export const useAuth=()=>useContext(Ctx)
 export function RequireAuth({children}){
-  const {user}=useAuth(),loc=useLocation()
-  return user?children:<Navigate to="/login" replace state={{from:loc.pathname}}/>}
-export function GuestOnly({children}){const {user}=useAuth();return user?<Navigate to="/feed" replace/>:children}
+  const {user,loading}=useAuth(),loc=useLocation()
+  if(loading)return <p className="panel p-6">Loading your session…</p>
+  return user?children:<Navigate to="/login" replace state={{from:loc.pathname}}/>
+}
+export function GuestOnly({children}){const {user,loading}=useAuth();return loading?<p className="panel p-6">Loading your session…</p>:user?<Navigate to="/feed" replace/>:children}
