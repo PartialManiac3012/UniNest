@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from 'react'
 import {NavLink,Link,Outlet,useLocation,useNavigate} from 'react-router-dom'
 import {useAuth} from '../auth.jsx'
 export const Icon=({n,className=''})=><span className={`material-symbols-outlined ${className}`} aria-hidden="true">{n}</span>
-const nav=[['/','Gateway'],['/discover','Directory'],['/feed','Activities'],['/events','Events']]
+const nav=[['/','Gateway'],['/discover','Directory'],['/feed','Activities'],['/events','Events'],['/club-events','Club events'],['/lost-found','Lost & found']]
 const Section=({title,links})=><div><h4 className="kicker mb-3">{title}</h4><ul className="space-y-2 text-sm">{links.map(l=><li key={l}><a href="#" className="hover:text-primary-container hover:underline">{l}</a></li>)}</ul></div>
 export default function Layout(){
   const {user,logout}=useAuth(),go=useNavigate(),q=useRef(null),{pathname}=useLocation(),[open,setOpen]=useState(false)
@@ -18,7 +18,7 @@ export default function Layout(){
         <label className="hidden md:flex items-center gap-2 border border-outline-variant rounded px-3 py-1.5 w-64 focus-within:border-primary-container">
           <Icon n="search" className="text-ink-2"/><input ref={q} placeholder="Search courses, resources" className="bg-transparent text-sm outline-none flex-1 min-w-0"/><kbd className="text-[10px] text-ink-2">⌘K</kbd></label>
         {user?<><div className="hidden sm:block text-right leading-tight"><div className="text-xs font-semibold">{user.name}</div><div className="text-[11px] text-ink-2">@{user.uid}</div></div>
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-primary-wash text-primary-container text-xs font-bold" aria-hidden="true">{user.name.trim()[0]?.toUpperCase()}</span>
+          {user.avatar?<img src={user.avatar} alt={`${user.name} profile`} className="h-9 w-9 rounded-full object-cover"/>:<span className="grid h-9 w-9 place-items-center rounded-full bg-primary-wash text-primary-container text-xs font-bold" aria-hidden="true">{user.name.trim()[0]?.toUpperCase()}</span>}
           <button onClick={()=>{logout();go('/')}} className="btn-outline !py-1.5">Log out</button></>
           :<><Link to="/login" className="text-sm font-semibold hover:text-primary-container">Log in</Link><Link to="/signup" className="btn-primary !py-1.5">Create ID</Link></>}
         <button className="md:hidden p-1" aria-label="Menu" aria-expanded={open} onClick={()=>setOpen(!open)}><Icon n={open?'close':'menu'}/></button>

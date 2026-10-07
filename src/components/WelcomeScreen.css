@@ -1,0 +1,154 @@
+.login-screen {
+  min-height: 100svh;
+}
+
+.login-screen--greeting {
+  visibility: hidden;
+}
+
+.login-screen--zoom {
+  animation: login-arrive 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.welcome-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #fff4f6;
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    #650d25 0%,
+    #4a0616 48%,
+    #30030e 100%
+  );
+}
+
+.welcome-stage {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.welcome-word {
+  padding: 0.25em 0.1em;
+  font-family: "Snell Roundhand", "Segoe Script", "Apple Chancery", cursive;
+  font-size: clamp(3rem, 10vw, 9rem);
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+  animation: greeting 1.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.welcome-word:lang(hi) {
+  font-family: "Kohinoor Devanagari", "Nirmala UI", sans-serif;
+  font-size: clamp(3rem, 9vw, 8rem);
+  letter-spacing: normal;
+}
+
+.welcome-word--last {
+  animation-name: final-greeting;
+}
+
+.welcome-screen--zoom {
+  pointer-events: none;
+  animation: welcome-fade 1.2s ease-in both;
+}
+
+.welcome-screen--zoom .welcome-stage {
+  animation: zoom-through 1.2s cubic-bezier(0.7, 0, 0.25, 1) both;
+}
+
+.welcome-screen--zoom .welcome-word {
+  animation: none;
+}
+
+@keyframes greeting {
+  0% {
+    opacity: 0;
+    transform: translate(-45px, 18px) rotate(-4deg);
+    filter: blur(7px);
+  }
+  22%,
+  80% {
+    opacity: 1;
+    transform: translate(0, 0);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(40px, -12px) rotate(2deg);
+    filter: blur(4px);
+  }
+}
+
+@keyframes final-greeting {
+  0% {
+    opacity: 0;
+    transform: translate(-45px, 18px) rotate(-4deg);
+    filter: blur(7px);
+  }
+  22%,
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+    filter: blur(0);
+  }
+}
+
+@keyframes zoom-through {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(0.94) rotate(-2deg);
+    opacity: 1;
+  }
+  78% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-12vw, -6vh) scale(28) rotate(7deg);
+    opacity: 0;
+    filter: blur(12px);
+  }
+}
+
+@keyframes welcome-fade {
+  0%,
+  32% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes login-arrive {
+  0%,
+  20% {
+    opacity: 0;
+    transform: scale(0.86);
+    filter: blur(9px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-word,
+  .welcome-screen--zoom,
+  .welcome-screen--zoom .welcome-stage,
+  .login-screen--zoom {
+    animation: none;
+  }
+}

@@ -29,11 +29,11 @@ export function AuthProvider({children}){
       if(Date.now()>p.exp)throw new Error('This code expired. Request a new one.')
       if(p.code!==code.trim())throw new Error('That code is not right. Check it and try again.')
       write('uninest.pending',{...p,ok:true})},
-    async createAccount({email,name,college,year,password,interests=[]}){
+    async createAccount({email,name,college,year,password,interests=[],avatar='',phone=''}) {
       const p=read('uninest.pending',null)
       if(!p?.ok||p.email!==norm(email))throw new Error('Verify your email first.')
       if(password.length<8)throw new Error('Use at least 8 characters for your password.')
-      const u={uid:idFromEmail(email),email:norm(email),name:name.trim(),college:college.trim(),year,interests,skills:'',bio:'',hash:await sha(password),created:Date.now()}
+      const u={uid:idFromEmail(email),email:norm(email),name:name.trim(),college:college.trim(),year,interests,avatar,phone:phone.trim(),skills:'',bio:'',hash:await sha(password),created:Date.now()}
       write('uninest.users',[...read('uninest.users',[]),u]);localStorage.removeItem('uninest.pending')
       write('uninest.session',u.uid);setUser(u)},
     async login(idOrEmail,password){

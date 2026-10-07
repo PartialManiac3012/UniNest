@@ -5,11 +5,27 @@ import {Icon} from '../components/Layout.jsx'
 import {INTERESTS} from '../data.js'
 import {Chip} from '../components/ui.jsx'
 const steps=['Email','Verify','Profile'],years=['1st year','2nd year','3rd year','4th year','Postgraduate']
+const MAX_AVATAR_BYTES=2*1024*1024
+const toDataUrl=file=>new Promise((resolve,reject)=>{
+  const r=new FileReader()
+  r.onload=()=>resolve(r.result)
+  r.onerror=()=>reject(new Error('Could not read that image. Please try another file.'))
+  r.readAsDataURL(file)
+})
 export default function Signup(){
   const {sendCode,verifyCode,createAccount,previewId}=useAuth(),nav=useNavigate()
   const [step,setStep]=useState(0),[demo,setDemo]=useState(''),[err,setErr]=useState(''),[busy,setBusy]=useState(false),[show,setShow]=useState(false)
-  const [f,setF]=useState({email:'',code:'',name:'',college:'',year:years[0],password:'',confirm:'',interests:[]})
+  const [f,setF]=useState({email:'',code:'',name:'',college:'',year:years[0],password:'',confirm:'',interests:[],avatar:'',phone:''})
   const set=k=>e=>setF({...f,[k]:e.target.value})
+  const onAvatar=async e=>{
+    const file=e.target.files?.[0]
+    if(!file)return
+    setErr('')
+    if(!file.type.startsWith('image/')){setErr('Please choose an image file.');return}
+    if(file.size>MAX_AVATAR_BYTES){setErr('Please choose an image under 2MB.');return}
+    const avatar=await toDataUrl(file)
+    setF(v=>({...v,avatar}))
+  }
   const run=fn=>async e=>{e.preventDefault();setErr('');setBusy(true);try{await fn()}catch(x){setErr(x.message)}setBusy(false)}
   const send=run(async()=>{setDemo(sendCode(f.email));setStep(1)})
   const verify=run(async()=>{verifyCode(f.email,f.code);setStep(2)})
@@ -36,9 +52,19 @@ export default function Signup(){
         <div className="flex justify-between text-sm"><button type="button" className="underline underline-offset-4" onClick={()=>{setStep(0);setErr('')}}>Change email</button><button type="button" className="underline underline-offset-4" onClick={()=>{try{setDemo(sendCode(f.email));setErr('')}catch(x){setErr(x.message)}}}>Send a new code</button></div></form>}
       {step===2&&<form onSubmit={create} className="space-y-4" noValidate><h2 className="text-2xl">Set up your profile</h2>
         <p className="text-sm text-ink-2">Your ID: <b className="text-ink">@{previewId(f.email)}</b></p>
+        <div><span className="label">Profile photo (optional)</span>
+          <div className="flex items-center gap-4">
+            {f.avatar?<img src={f.avatar} alt="Profile preview" className="h-14 w-14 rounded-full border border-outline-variant object-cover"/>:<span className="grid h-14 w-14 place-items-center rounded-full border border-outline-variant bg-surface-low text-xs font-bold text-ink-2">PHOTO</span>}
+            <div className="space-y-2">
+              <input type="file" accept="image/*" className="block text-sm" onChange={e=>{onAvatar(e).catch(x=>setErr(x.message))}}/>
+              {f.avatar&&<button type="button" className="text-sm underline underline-offset-4" onClick={()=>setF({...f,avatar:''})}>Remove photo</button>}
+            </div>
+          </div>
+        </div>
         <div><label className="label" htmlFor="nm">Full name</label><input id="nm" className="field" autoComplete="name" value={f.name} onChange={set('name')} required/></div>
         <div className="grid gap-4 sm:grid-cols-2"><div><label className="label" htmlFor="cl">College</label><input id="cl" className="field" value={f.college} onChange={set('college')} required/></div>
           <div><label className="label" htmlFor="yr">Year</label><select id="yr" className="field" value={f.year} onChange={set('year')}>{years.map(y=><option key={y}>{y}</option>)}</select></div></div>
+        <div><label className="label" htmlFor="ph">Phone number</label><input id="ph" type="tel" className="field" autoComplete="tel" placeholder="+91 98765 43210" value={f.phone} onChange={set('phone')} required/></div>
         <div><span className="label">Pick your interests (at least one)</span><div className="flex flex-wrap gap-2">{INTERESTS.map(i=><Chip type="button" key={i} on={f.interests.includes(i)} onClick={()=>setF({...f,interests:f.interests.includes(i)?f.interests.filter(x=>x!==i):[...f.interests,i]})}>{i}</Chip>)}</div></div>
         <div><label className="label" htmlFor="p1">Password (8+ characters)</label><div className="relative"><input id="p1" type={show?'text':'password'} className="field pr-10" autoComplete="new-password" value={f.password} onChange={set('password')} required/>
           <button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)} className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-2"><Icon n={show?'visibility_off':'visibility'}/></button></div></div>

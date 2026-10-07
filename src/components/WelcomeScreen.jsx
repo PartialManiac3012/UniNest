@@ -1,0 +1,35 @@
+import {useEffect,useState} from 'react'
+import './WelcomeScreen.css'
+
+const greetings=[
+  {text:'Welcome',lang:'en'},
+  {text:'स्वागत है',lang:'hi'},
+  {text:'Bienvenue',lang:'fr'},
+]
+
+export default function WelcomeScreen({children}){
+  const [index,setIndex]=useState(0)
+  const [phase,setPhase]=useState('greeting')
+
+  useEffect(()=>{
+    const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const timers=reducedMotion
+      ? [setTimeout(()=>setPhase('done'),900)]
+      : [
+        setTimeout(()=>setIndex(1),1350),
+        setTimeout(()=>setIndex(2),2700),
+        setTimeout(()=>setPhase('zoom'),4100),
+        setTimeout(()=>setPhase('done'),5300),
+      ]
+    return ()=>timers.forEach(clearTimeout)
+  },[])
+
+  return <>
+    <div className={`login-screen login-screen--${phase}`} inert={phase!=='done'} aria-hidden={phase!=='done'}>{children}</div>
+    {phase!=='done'&&<div className={`welcome-screen welcome-screen--${phase}`} role="status" aria-label="Welcome to UniNest">
+      <div className="welcome-stage" aria-hidden="true">
+        <span key={index} lang={greetings[index].lang} className={`welcome-word ${index===2?'welcome-word--last':''}`}>{greetings[index].text}</span>
+      </div>
+    </div>}
+  </>
+}

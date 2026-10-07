@@ -1,5 +1,6 @@
 import {Routes,Route,Navigate} from 'react-router-dom'
 import Layout from './components/Layout.jsx'
+import WelcomeScreen from './components/WelcomeScreen.jsx'
 import {RequireAuth,GuestOnly} from './auth.jsx'
 import Gateway from './pages/Gateway.jsx'
 import Feed from './pages/Feed.jsx'
@@ -8,11 +9,13 @@ import Partners from './pages/Partners.jsx'
 import Profile from './pages/Profile.jsx'
 import Messages from './pages/Messages.jsx'
 import Events from './pages/Events.jsx'
+import ClubEvents from './pages/ClubEvents.jsx'
+import LostFound from './pages/LostFound.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 export default function App(){
   const guard=el=><RequireAuth>{el}</RequireAuth>
-  return <Routes><Route element={<Layout/>}>
+  return <WelcomeScreen><Routes><Route element={<Layout/>}>
     <Route index element={<Gateway/>}/>
     <Route path="login" element={<GuestOnly><Login/></GuestOnly>}/>
     <Route path="signup" element={<GuestOnly><Signup/></GuestOnly>}/>
@@ -24,5 +27,7 @@ export default function App(){
     <Route path="dashboard" element={<Navigate to="/feed" replace/>}/>
     <Route path="directory" element={<Navigate to="/discover" replace/>}/>
     <Route path="events" element={guard(<Events/>)}/>
-    <Route path="*" element={<Navigate to="/" replace/>}/></Route></Routes>
+    <Route path="club-events" element={guard(<ClubEvents/>)}/>
+    <Route path="lost-found" element={guard(<LostFound/>)}/>
+    <Route path="*" element={<Navigate to="/" replace/>}/></Route></Routes></WelcomeScreen>
 }
