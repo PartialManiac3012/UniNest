@@ -129,6 +129,40 @@ create table if not exists public.messages (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.connection_requests (
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid not null references auth.users(id) on delete cascade,
+  recipient_id uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','accepted','declined')),
+  created_at timestamptz not null default now(),
+  unique (sender_id, recipient_id)
+);
+
+alter table public.connection_requests enable row level security;
+drop policy if exists "Users can view their connection requests" on public.connection_requests;
+drop policy if exists "Users can send connection requests" on public.connection_requests;
+drop policy if exists "Recipients can respond to connection requests" on public.connection_requests;
+create policy "Users can view their connection requests"
+on public.connection_requests for select to authenticated
+using (auth.uid() = sender_id or auth.uid() = recipient_id);
+create policy "Users can send connection requests"
+on public.connection_requests for insert to authenticated
+with check (auth.uid() = sender_id);
+create policy "Recipients can respond to connection requests"
+on public.connection_requests for update to authenticated
+using (auth.uid() = recipient_id)
+with check (auth.uid() = recipient_id);
+
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.connection_requests;
+  exception
+    when duplicate_object then null;
+  end;
+end
+$$;
+
 alter table public.messages enable row level security;
 create or replace function public.is_verified_auth_user(user_id uuid)
 returns boolean

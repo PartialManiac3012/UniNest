@@ -28,6 +28,9 @@ export function SocialProvider({children}){
   const [remotePeople,setRemotePeople]=useState([])
   const [remoteProfilesLoaded,setRemoteProfilesLoaded]=useState(!supabase)
   const [messageNotifications,setMessageNotifications]=useState([])
+  const [remoteRequests,setRemoteRequests]=useState([])
+  const [notificationError,setNotificationError]=useState('')
+  const [notificationRevision,setNotificationRevision]=useState(0)
   useEffect(()=>{localStorage.setItem(K,JSON.stringify(db))},[db])
   useEffect(()=>{setDb(d=>{const items=d.lostFound||[],active=items.filter(item=>!item.claimed||!item.claimedAt||Date.now()-item.claimedAt<CLAIM_RETENTION);return active.length===items.length?d:{...d,lostFound:active}})},[])
   const loadPostingPermission=async()=>{
@@ -46,17 +49,37 @@ export function SocialProvider({children}){
   }
   useEffect(()=>{loadPostingPermission()},[user])
   useEffect(()=>{
+    if(!supabase||!user?.authId){setRemoteRequests([]);return}
+    let active=true
+    const load=async()=>{
+      const {data,error}=await supabase.from('connection_requests').select('*').or(`sender_id.eq.${user.authId},recipient_id.eq.${user.authId}`)
+      if(active){
+        if(error)setNotificationError(error.message)
+        else {setRemoteRequests(data||[]);setNotificationError('');setNotificationRevision(value=>value+1)}
+      }
+    }
+    load()
+    const channel=supabase.channel(`connection-requests:${user.authId}`)
+      .on('postgres_changes',{event:'*',schema:'public',table:'connection_requests'},payload=>{
+        if(payload.new?.sender_id===user.authId||payload.new?.recipient_id===user.authId)load()
+      }).subscribe()
+    return()=>{active=false;supabase.removeChannel(channel)}
+  },[user?.authId])
+  useEffect(()=>{
     if(!supabase||!user?.authId){setMessageNotifications([]);return}
     let active=true
     const key=`uninest.notifications.read.${user.authId}`
     const load=async()=>{
       const since=Number(localStorage.getItem(key)||0)
-      const {data}=await supabase.from('messages').select('id,sender_id,created_at').eq('recipient_id',user.authId).gt('created_at',new Date(since).toISOString()).order('created_at',{ascending:false}).limit(30)
-      if(active)setMessageNotifications((data||[]).map(m=>({id:`message-${m.id}`,type:'message',from:m.sender_id,t:m.created_at,person:remotePeople.find(p=>p.authId===m.sender_id)})))
+      const {data,error}=await supabase.from('messages').select('id,sender_id,created_at').eq('recipient_id',user.authId).gt('created_at',new Date(since).toISOString()).order('created_at',{ascending:false}).limit(30)
+      if(active){
+        if(error)setNotificationError(error.message)
+        else {setMessageNotifications((data||[]).map(m=>({id:`message-${m.id}`,type:'message',from:m.sender_id,t:m.created_at,person:remotePeople.find(p=>p.authId===m.sender_id)})));setNotificationRevision(value=>value+1)}
+      }
     }
     load()
     const channel=supabase.channel(`notifications:${user.authId}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`recipient_id=eq.${user.authId}`},payload=>{
-      if(active)setMessageNotifications(current=>current.some(n=>n.id===`message-${payload.new.id}`)?current:[{id:`message-${payload.new.id}`,type:'message',from:payload.new.sender_id,t:payload.new.created_at,person:remotePeople.find(p=>p.authId===payload.new.sender_id)},...current])
+      if(active){setMessageNotifications(current=>current.some(n=>n.id===`message-${payload.new.id}`)?current:[{id:`message-${payload.new.id}`,type:'message',from:payload.new.sender_id,t:payload.new.created_at,person:remotePeople.find(p=>p.authId===payload.new.sender_id)},...current]);setNotificationRevision(value=>value+1)}
     }).subscribe()
     return()=>{active=false;supabase.removeChannel(channel)}
   },[user?.authId,remotePeople])
@@ -95,7 +118,15 @@ export function SocialProvider({children}){
     reportComment:(surface,itemId,commentId)=>upd(d=>{d.commentReports??=[];if(!d.commentReports.some(r=>r.surface===surface&&r.itemId===itemId&&r.commentId===commentId&&r.by===me))d.commentReports.push({id:rid(),surface,itemId,commentId,by:me,t:Date.now()});return d}),
     addTeam:t=>{requirePostAccess();upd(d=>{d.teams.unshift({id:rid(),by:me,joins:[],...t});return d})},
     toggleJoin:id=>upd(d=>{const t=pick(d.teams,id);t.joins=t.joins.includes(me)?t.joins.filter(x=>x!==me):[...t.joins,me];return d}),
-    toggleConnect:u=>upd(d=>{
+    toggleConnect:async u=>{
+      const target=people.find(p=>p.uid===u)
+      if(supabase&&user?.authId&&target?.authId){
+        const {error}=await supabase.from('connection_requests').upsert({sender_id:user.authId,recipient_id:target.authId,status:'pending'},{onConflict:'sender_id,recipient_id'})
+        if(error){setNotificationError(error.message);throw new Error(error.message)}
+        setNotificationError('')
+        return
+      }
+      upd(d=>{
       const c=d.conn[me]||[]
       if(c.includes(u)){d.conn[me]=c.filter(x=>x!==u);d.conn[u]=(d.conn[u]||[]).filter(x=>x!==me);return d}
       d.requests??=[]
@@ -103,13 +134,27 @@ export function SocialProvider({children}){
       d.notifications??=[]
       d.notifications.push({id:rid(),to:u,type:'connection',from:me,read:false,t:Date.now()})
       return d
-    }),
-    respondConnection:(id,accept)=>upd(d=>{const r=d.requests?.find(x=>x.id===id);if(!r||r.to!==me)return d;r.status=accept?'accepted':'declined';if(accept){d.conn[me]=[...new Set([...(d.conn[me]||[]),r.from])];d.conn[r.from]=[...new Set([...(d.conn[r.from]||[]),me])]};return d}),
+    })},
+    respondConnection:async(id,accept)=>{
+      const remote=remoteRequests.find(r=>r.id===id)
+      if(remote&&supabase){const {error}=await supabase.from('connection_requests').update({status:accept?'accepted':'declined'}).eq('id',id);if(error)throw new Error(error.message);return}
+      upd(d=>{const r=d.requests?.find(x=>x.id===id);if(!r||r.to!==me)return d;r.status=accept?'accepted':'declined';if(accept){d.conn[me]=[...new Set([...(d.conn[me]||[]),r.from])];d.conn[r.from]=[...new Set([...(d.conn[r.from]||[]),me])]};return d})
+    },
+    connectionStatus:u=>{
+      if((db.conn[me]||[]).includes(u))return 'connected'
+      if((db.requests||[]).some(r=>r.from===me&&r.to===u&&r.status==='pending'))return 'requested'
+      if((db.requests||[]).some(r=>r.from===u&&r.to===me&&r.status==='pending'))return 'incoming'
+      return 'none'
+    },
     notifications:()=> [
       ...(db.notifications||[]).filter(n=>n.to===me&&!n.read&&n.type!=='connection').map(n=>({...n,person:people.find(p=>p.uid===n.from)})),
       ...messageNotifications
     ],
-    pendingConnectionRequests:()=> (db.requests||[]).filter(r=>r.to===me&&r.status==='pending').map(r=>({...r,person:people.find(p=>p.uid===r.from)})),
+    pendingConnectionRequests:()=> [
+      ...(db.requests||[]).filter(r=>r.to===me&&r.status==='pending').map(r=>({...r,person:people.find(p=>p.uid===r.from)})),
+      ...remoteRequests.filter(r=>r.recipient_id===user?.authId&&r.status==='pending').map(r=>({...r,from:people.find(p=>p.authId===r.sender_id)?.uid,person:people.find(p=>p.authId===r.sender_id)}))
+    ],
+    notificationError,notificationRevision,
     markNotificationsRead:()=>{upd(d=>{(d.notifications||[]).filter(n=>n.to===me).forEach(n=>{n.read=true});return d});if(user?.authId)localStorage.setItem(`uninest.notifications.read.${user.authId}`,String(Date.now()));setMessageNotifications([])},
     thread:o=>db.msgs.filter(m=>(m.a===me&&m.b===o)||(m.a===o&&m.b===me)),
     partners:()=>[...new Set([...(db.conn[me]||[]),...db.msgs.flatMap(m=>m.a===me?[m.b]:m.b===me?[m.a]:[])])],
