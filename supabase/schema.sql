@@ -180,6 +180,15 @@ as $$
   );
 $$;
 grant execute on function public.is_verified_auth_user(uuid) to authenticated;
+create or replace function public.is_verified_student()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select public.is_verified_auth_user(auth.uid());
+$$;
+grant execute on function public.is_verified_student() to authenticated;
 drop policy if exists "Users can read their own messages" on public.messages;
 drop policy if exists "Users can send messages as themselves" on public.messages;
 create policy "Users can read their own messages"

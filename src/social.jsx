@@ -35,14 +35,7 @@ export function SocialProvider({children}){
   useEffect(()=>{setDb(d=>{const items=d.lostFound||[],active=items.filter(item=>!item.claimed||!item.claimedAt||Date.now()-item.claimedAt<CLAIM_RETENTION);return active.length===items.length?d:{...d,lostFound:active}})},[])
   const loadPostingPermission=async()=>{
     if(!user){setCanPost(false);setPostingPermissionError('');return false}
-    if(!supabase){const allowed=isVerifiedEmail(user.email);setCanPost(allowed);setPostingPermissionError('');return allowed}
-    const {data,error}=await supabase.rpc('is_verified_student')
-    if(error){
-      setCanPost(false)
-      setPostingPermissionError(error.message||'Supabase could not check your verification status.')
-      return false
-    }
-    const allowed=data===true
+    const allowed=isVerifiedEmail(user.email)
     setCanPost(allowed)
     setPostingPermissionError('')
     return allowed
