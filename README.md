@@ -450,7 +450,7 @@ vite.config.js
 
 ---
 
-# 🔮 Future Improvements
+#  Future Improvements
 
 Planned improvements for Little Help:
 
