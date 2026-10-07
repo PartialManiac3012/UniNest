@@ -22,7 +22,7 @@ const seed=()=>({
  conn:{},msgs:[],clubEvents:[
   {id:'ce1',club:'Coding & Open Source Society',clubEmail:'club@uninest.example',title:'Open Source Sprint Night',description:'Build, review, and ship a contribution with mentors from the campus OSS community.',date:'2026-10-24',time:'18:00',venue:'Innovation Hall',comments:[],joins:[]},
   {id:'ce2',club:'AI Research Circle',clubEmail:'ai.club@uninest.example',title:'Responsible AI Research Talk',description:'A practical discussion on evaluation, safety, and reproducible student research.',date:'2026-11-02',time:'16:30',venue:'Seminar Room 2',comments:[],joins:[]}
-],lostFound:[]})
+],lostFound:[],commentReports:[]})
 const Ctx=createContext(null)
 export function SocialProvider({children}){
   const {user}=useAuth(),me=user?.uid
@@ -34,10 +34,13 @@ export function SocialProvider({children}){
   const people=[...SEED,...reg],pick=(a,id)=>a.find(x=>x.id===id)
   const clubEmails=['club@uninest.example','ai.club@uninest.example']
   const isClubMember=!!user&&clubEmails.includes(user.email)
-  const api={me,people,person:u=>people.find(p=>p.uid===u),posts:db.posts,teams:db.teams,conns:db.conn[me]||[],clubEvents:db.clubEvents||[],lostFound:db.lostFound||[],isClubMember,
+  const api={me,people,person:u=>people.find(p=>p.uid===u),posts:db.posts,teams:db.teams,conns:db.conn[me]||[],clubEvents:db.clubEvents||[],lostFound:db.lostFound||[],commentReports:db.commentReports||[],isClubMember,
     addPost:(text,tag)=>upd(d=>{d.posts.unshift({id:rid(),by:me,text,tag,t:Date.now(),likes:[],comments:[]});return d}),
     toggleLike:id=>upd(d=>{const p=pick(d.posts,id);p.likes=p.likes.includes(me)?p.likes.filter(x=>x!==me):[...p.likes,me];return d}),
-    addComment:(id,text)=>upd(d=>{pick(d.posts,id).comments.push({by:me,text,t:Date.now()});return d}),
+    addComment:(id,text)=>upd(d=>{pick(d.posts,id).comments.push({id:rid(),by:me,text,t:Date.now()});return d}),
+    deleteComment:(surface,itemId,commentId)=>upd(d=>{const list=surface==='post'?d.posts:d.clubEvents;const item=pick(list,itemId);if(!item)return d;const index=item.comments.findIndex((c,i)=>(c.id||`${itemId}-${i}`)===commentId),comment=item.comments[index];if(!comment||comment.by!==me)throw new Error('You can only delete your own comment.');item.comments.splice(index,1);return d}),
+    adminDeleteComment:(surface,itemId,commentId)=>upd(d=>{const list=surface==='post'?d.posts:d.clubEvents;const item=pick(list,itemId);if(!item)return d;const index=item.comments.findIndex((c,i)=>(c.id||`${itemId}-${i}`)===commentId);if(index>=0)item.comments.splice(index,1);d.commentReports=(d.commentReports||[]).filter(r=>!(r.surface===surface&&r.itemId===itemId&&r.commentId===commentId));return d}),
+    reportComment:(surface,itemId,commentId)=>upd(d=>{d.commentReports??=[];if(!d.commentReports.some(r=>r.surface===surface&&r.itemId===itemId&&r.commentId===commentId&&r.by===me))d.commentReports.push({id:rid(),surface,itemId,commentId,by:me,t:Date.now()});return d}),
     addTeam:t=>upd(d=>{d.teams.unshift({id:rid(),by:me,joins:[],...t});return d}),
     toggleJoin:id=>upd(d=>{const t=pick(d.teams,id);t.joins=t.joins.includes(me)?t.joins.filter(x=>x!==me):[...t.joins,me];return d}),
     toggleConnect:u=>upd(d=>{const c=d.conn[me]||[];d.conn[me]=c.includes(u)?c.filter(x=>x!==u):[...c,u];return d}),

@@ -76,10 +76,12 @@ export default function LostFound(){
           <div className="flex items-center gap-2 border-t border-outline-variant pt-3 text-sm"><Avatar p={owner} size={32}/><span>Posted by <b>{owner?.name||item.by}</b></span></div>
           {!item.claimed&&item.type==='found'&&!mine&&<button className="btn-primary w-full" disabled={requested} onClick={()=>requestClaim(item.id)}>{requested?'Claim request sent':'Claim this item'}</button>}
           {!item.claimed&&!mine&&<Link to={`/messages?to=${item.by}`} className="btn-outline block w-full text-center">{item.type==='found'?'Message finder':'Message person who lost it'}</Link>}
-          {!item.claimed&&mine&&item.type==='found'&&<button className="btn-outline w-full" disabled={!item.claimRequests?.length} onClick={()=>markClaimed(item.id)}>{item.claimRequests?.length?'Mark as claimed':'Waiting for the owner to claim'}</button>}
+          {!item.claimed&&mine&&item.type==='found'&&<><p className="text-center text-xs text-ink-2">{item.claimRequests?.length?`${item.claimRequests.length} owner claim request${item.claimRequests.length===1?'':'s'} received.`:'No owner claim requests yet.'}</p><button className="btn-outline w-full" disabled={!item.claimRequests?.length} onClick={()=>markClaimed(item.id)}>{item.claimRequests?.length?'Mark as claimed':'Waiting for the owner to claim'}</button></>}
+          {!item.claimed&&mine&&item.type==='lost'&&<p className="text-center text-xs text-ink-2">Waiting for someone who found this item to contact you.</p>}
         </div>
       </article>})}
     </section>}
+    <p className="text-xs text-ink-2">Claim and messaging buttons appear on another student’s post. Your own post only shows the controls available to you as the poster.</p>
     <p className="text-xs text-ink-2">Claimed posts stay visible with their photo for seven days, then are automatically removed to recover local storage space. The person who found an item can mark it claimed only after the owner submits a claim.</p>
   </div>
 }

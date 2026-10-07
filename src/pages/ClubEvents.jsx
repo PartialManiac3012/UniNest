@@ -5,8 +5,8 @@ import {useSocial} from '../social.jsx'
 const emptyEvent={title:'',description:'',date:'',time:'',venue:''}
 
 export default function ClubEvents(){
-  const {user}=useAuth()
-  const {clubEvents,isClubMember,addClubEvent,addEventComment,joinClubEvent}=useSocial()
+  const {user,isAdmin}=useAuth()
+  const s=useSocial(),{clubEvents,isClubMember,addClubEvent,addEventComment,joinClubEvent}=s
   const [draft,setDraft]=useState(emptyEvent),[comment,setComment]=useState({}),[join,setJoin]=useState(null),[notice,setNotice]=useState(''),[error,setError]=useState('')
   const update=(key,value)=>setDraft({...draft,[key]:value})
   const publish=e=>{
@@ -45,7 +45,7 @@ export default function ClubEvents(){
         <p className="mt-3 leading-6 text-ink-2">{event.description}</p><p className="mt-3 text-sm"><b>Venue:</b> {event.venue}</p>
         <button className="btn-primary mt-4 w-full" onClick={()=>{setJoin(event);setError('')}}>Join event</button>
         <div className="mt-5 border-t border-outline-variant pt-4"><h3 className="text-lg">Comments</h3>
-          <div className="mt-3 space-y-2">{event.comments.map(c=><p key={c.id} className="rounded bg-surface-low p-2 text-sm"><b>@{c.by}</b> {c.text}</p>)}</div>
+          <div className="mt-3 space-y-2">{event.comments.map((c,i)=><p key={c.id||i} className="rounded bg-surface-low p-2 text-sm"><b>@{c.by}</b> {c.text}<span className="ml-3 text-xs text-ink-2"><button onClick={()=>s.reportComment('event',event.id,c.id||`${event.id}-${i}`)} className="hover:text-error">Report</button>{isAdmin&&<button onClick={()=>s.adminDeleteComment('event',event.id,c.id||`${event.id}-${i}`)} className="ml-2 hover:text-error">Delete</button>}</span></p>)}</div>
           <form onSubmit={e=>submitComment(e,event.id)} className="mt-3 flex gap-2"><input className="field" placeholder="Add a comment" value={comment[event.id]||''} onChange={e=>setComment({...comment,[event.id]:e.target.value})}/><button className="btn-outline">Post</button></form>
         </div>
       </article>)}
