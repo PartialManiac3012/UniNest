@@ -19,7 +19,7 @@ export const idFromEmail=email=>{
 }
 const profileFromUser=(authUser,local={})=>{
   const meta=authUser?.user_metadata||{}
-  return {...local,authId:authUser?.id,uid:meta.uid||local.uid||idFromEmail(authUser.email||''),email:authUser.email||local.email||'',name:meta.name||local.name||'',college:meta.college||local.college||'',year:meta.year||local.year||'',stream:meta.stream||local.stream||'',interests:meta.interests||local.interests||[],avatar:meta.avatar||local.avatar||'',phone:meta.phone||local.phone||'',bio:meta.bio||local.bio||'',skills:meta.skills||local.skills||'',verified:isVerifiedEmail(authUser.email)}
+  return {...local,authId:authUser?.id,uid:meta.uid??local.uid??idFromEmail(authUser.email||''),email:authUser.email??local.email??'',name:meta.name??local.name??'',college:meta.college??local.college??'',year:meta.year??local.year??'',stream:meta.stream??local.stream??'',interests:meta.interests??local.interests??[],avatar:meta.avatar??local.avatar??'',phone:meta.phone??local.phone??'',bio:meta.bio??local.bio??'',skills:meta.skills??local.skills??'',verified:isVerifiedEmail(authUser.email)}
 }
 const saveLocalProfile=profile=>{
   const users=read('uninest.users',[])
@@ -82,12 +82,18 @@ export function AuthProvider({children}){
   const updateProfile=async patch=>{
     if(!user)return
     if(!supabase)throw new Error('Supabase is not configured.')
-    const {data,error}=await supabase.auth.updateUser({data:patch})
-    if(error)throw new Error(error.message)
-    const profile=profileFromUser(data.user,{...user,...patch})
+    const profile=profileFromUser({...user,user_metadata:{...user,...patch}},{...user,...patch})
     saveLocalProfile(profile)
-    await saveSupabaseProfile(profile)
     setUser(profile)
+    const errors=[]
+    try{
+      const {data,error}=await supabase.auth.updateUser({data:patch})
+      if(error)errors.push(`account metadata: ${error.message}`)
+      else if(data.user)setUser(profileFromUser(data.user,profile))
+    }catch(error){errors.push(`account metadata: ${error.message||'request failed'}`)}
+    try{await saveSupabaseProfile(profile)}
+    catch(error){errors.push(`profile record: ${error.message||'request failed'}`)}
+    if(errors.length===2)throw new Error(`Profile saved on this device, but could not sync with Supabase (${errors.join('; ')}).`)
   }
   const banEmail=email=>{
     if(!user||!ADMIN_EMAILS.includes(user.email))throw new Error('Only admins can ban email addresses.')

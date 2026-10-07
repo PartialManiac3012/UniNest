@@ -84,9 +84,6 @@ export function SocialProvider({children}){
       if(!error&&data){
         const profiles=data.map(p=>({...p,authId:p.id,verified:isVerifiedEmail(p.email)}))
         setRemotePeople(profiles)
-        const validIds=new Set(profiles.map(p=>p.uid))
-        const users=JSON.parse(localStorage.getItem('uninest.users')||'[]')
-        localStorage.setItem('uninest.users',JSON.stringify(users.filter(p=>validIds.has(p.uid))))
       }
       setRemoteProfilesLoaded(true)
     })
@@ -95,7 +92,7 @@ export function SocialProvider({children}){
   const upd=fn=>setDb(d=>fn(structuredClone(d)))
   let reg=[];try{reg=(JSON.parse(localStorage.getItem('uninest.users'))||[]).map(({hash,...u})=>u)}catch{}
   const localPeople=reg.filter(p=>!SAMPLE_USERS.has(p.uid)&&(!supabase||!remoteProfilesLoaded||remotePeople.some(remote=>remote.uid===p.uid))).map(p=>({...p,verified:p.verified||isVerifiedEmail(p.email||'')}))
-  const people=[...remotePeople,...localPeople].reduce((all,p)=>all.some(x=>x.uid===p.uid)?all:[...all,p],[])
+  const people=[user,...remotePeople,...localPeople].filter(Boolean).reduce((all,p)=>all.some(x=>x.uid===p.uid)?all:[...all,p],[])
   const pick=(a,id)=>a.find(x=>x.id===id)
   const clubEmails=['club@uninest.example','ai.club@uninest.example']
   const isClubMember=!!user&&clubEmails.includes(user.email)
