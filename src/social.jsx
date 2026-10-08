@@ -47,7 +47,9 @@ export function SocialProvider({children}){
     let active=true
     const load=async()=>{
       const {data,error}=await supabase.from('posts').select('*').order('created_at',{ascending:false})
-      if(active&&!error)setRemotePosts((data||[]).map(post=>({
+      if(!active)return
+      if(error){setNotificationError(`Could not load shared posts: ${notificationFailure(error)}`);return}
+      setRemotePosts((data||[]).map(post=>({
         ...post,id:post.id,by:post.by_uid,text:post.text,tag:post.tag,t:new Date(post.created_at).getTime(),
         likes:post.likes||[],comments:post.comments||[],pinned:!!post.pinned
       })))
