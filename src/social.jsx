@@ -165,11 +165,32 @@ export function SocialProvider({children}){
       }
       upd(d=>{d.posts.unshift(post);return d})
     },
-    editPost:(id,text,tag)=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only edit your own post.');upd(d=>{const p=pick(d.posts,id);if(p){p.text=text.trim();p.tag=tag}return d});if(supabase)supabase.from('posts').update({text:text.trim(),tag}).eq('id',id).eq('by_uid',me)},
+    editPost:async(id,text,tag)=>{
+      const post=posts.find(item=>item.id===id)
+      if(!post||post.by!==me)throw new Error('You can only edit your own post.')
+      const nextText=text.trim()
+      if(supabase){
+        const {error}=await supabase.from('posts').update({text:nextText,content:nextText,tag}).eq('id',id).eq('by_uid',me)
+        if(error)throw new Error(`Could not update post: ${error.message}`)
+        setRemotePosts(current=>current.map(item=>item.id===id?{...item,text:nextText,content:nextText,tag}:item))
+      }
+      upd(d=>{const p=pick(d.posts,id);if(p){p.text=nextText;p.tag=tag}return d})
+    },
     deletePost:id=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only delete your own post.');upd(d=>({...d,posts:d.posts.filter(p=>p.id!==id)}));if(supabase)supabase.from('posts').delete().eq('id',id).eq('by_uid',me)},
     pinPost:id=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only pin your own post.');const pinned=!post.pinned;upd(d=>{const p=pick(d.posts,id);if(p)p.pinned=pinned;return d});if(supabase)supabase.from('posts').update({pinned}).eq('id',id).eq('by_uid',me)},
     toggleLike:id=>upd(d=>{const p=pick(d.posts,id);if(p)p.likes=p.likes.includes(me)?p.likes.filter(x=>x!==me):[...p.likes,me];return d}),
-    addComment:(id,text)=>upd(d=>{const p=pick(d.posts,id);if(p)p.comments.push({id:rid(),by:me,text,t:Date.now()});return d}),
+    addComment:async(id,text)=>{
+      const post=posts.find(item=>item.id===id)
+      if(!post)throw new Error('This post is no longer available.')
+      const comment={id:rid(),by:me,text,t:Date.now()}
+      const comments=[...(post.comments||[]),comment]
+      if(supabase){
+        const {error}=await supabase.from('posts').update({comments}).eq('id',id).eq('by_uid',post.by)
+        if(error)throw new Error(`Could not save reply: ${error.message}`)
+        setRemotePosts(current=>current.map(item=>item.id===id?{...item,comments}:item))
+      }
+      upd(d=>{const p=pick(d.posts,id);if(p)p.comments.push(comment);return d})
+    },
     deleteComment:(surface,itemId,commentId)=>upd(d=>{const list=surface==='post'?d.posts:d.clubEvents;const item=pick(list,itemId);if(!item)return d;const index=item.comments.findIndex((c,i)=>(c.id||`${itemId}-${i}`)===commentId),comment=item.comments[index];if(!comment||comment.by!==me)throw new Error('You can only delete your own comment.');item.comments.splice(index,1);return d}),
     adminDeleteComment:(surface,itemId,commentId)=>upd(d=>{const list=surface==='post'?d.posts:d.clubEvents;const item=pick(list,itemId);if(!item)return d;const index=item.comments.findIndex((c,i)=>(c.id||`${itemId}-${i}`)===commentId);if(index>=0)item.comments.splice(index,1);d.commentReports=(d.commentReports||[]).filter(r=>!(r.surface===surface&&r.itemId===itemId&&r.commentId===commentId));return d}),
     reportComment:(surface,itemId,commentId)=>upd(d=>{d.commentReports??=[];if(!d.commentReports.some(r=>r.surface===surface&&r.itemId===itemId&&r.commentId===commentId&&r.by===me))d.commentReports.push({id:rid(),surface,itemId,commentId,by:me,t:Date.now()});return d}),
