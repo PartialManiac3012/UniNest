@@ -4,7 +4,7 @@ import {useAuth} from '../auth.jsx'
 import {useSocial} from '../social.jsx'
 import {Avatar,VerifiedBadge,ago} from './ui.jsx'
 export const Icon=({n,className=''})=><span className={`material-symbols-outlined ${className}`} aria-hidden="true">{n}</span>
-const nav=[['/','Homepage'],['/discover','Discover'],['/feed','Activities'],['/events','Events'],['/club-events','Club events'],['/lost-found','Lost & found']]
+const nav=[['/','Homepage'],['/discover','Discover'],['/feed','Activities'],['/messages','Messages'],['/events','Events'],['/club-events','Club events'],['/lost-found','Lost & found']]
 const Section=({title,links})=><div><h4 className="kicker mb-3">{title}</h4><ul className="space-y-2 text-sm">{links.map(l=><li key={l}><a href="#" className="hover:text-primary-container hover:underline">{l}</a></li>)}</ul></div>
 export default function Layout(){
   const {user,logout}=useAuth(),s=useSocial(),go=useNavigate(),q=useRef(null),noticeRef=useRef(null),{pathname}=useLocation(),[open,setOpen]=useState(false),[noticeOpen,setNoticeOpen]=useState(false),[tick,setTick]=useState(0)

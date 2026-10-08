@@ -94,11 +94,16 @@ export function SocialProvider({children}){
   let reg=[];try{reg=(JSON.parse(localStorage.getItem('uninest.users'))||[]).map(({hash,...u})=>u)}catch{}
   const localPeople=reg.filter(p=>!SAMPLE_USERS.has(p.uid)&&(!supabase||!remoteProfilesLoaded||remotePeople.some(remote=>remote.uid===p.uid))).map(p=>({...p,verified:p.verified||isVerifiedEmail(p.email||'')}))
   const people=[user,...remotePeople,...localPeople].filter(Boolean).reduce((all,p)=>all.some(x=>x.uid===p.uid)?all:[...all,p],[])
+  const remoteConnections=new Set(remoteRequests.filter(r=>r.status==='accepted').map(r=>{
+    const otherId=r.sender_id===user?.authId?r.recipient_id:r.sender_id
+    return people.find(p=>p.authId===otherId)?.uid
+  }).filter(Boolean))
+  const connections=[...new Set([...(db.conn[me]||[]),...remoteConnections])]
   const pick=(a,id)=>a.find(x=>x.id===id)
   const clubEmails=['club@uninest.example','ai.club@uninest.example']
   const isClubMember=!!user&&clubEmails.includes(user.email)
   const requirePostAccess=()=>{if(!canPost)throw new Error('Verify your student account before creating posts. You can still comment and interact with other users.')}
-  const api={me,people,person:u=>people.find(p=>p.uid===u),posts:db.posts,teams:db.teams,conns:db.conn[me]||[],clubEvents:db.clubEvents||[],lostFound:db.lostFound||[],commentReports:db.commentReports||[],isClubMember,canPost,postingPermissionError,refreshPostingPermission:loadPostingPermission,
+  const api={me,people,person:u=>people.find(p=>p.uid===u),posts:db.posts,teams:db.teams,conns:connections,clubEvents:db.clubEvents||[],lostFound:db.lostFound||[],commentReports:db.commentReports||[],isClubMember,canPost,postingPermissionError,refreshPostingPermission:loadPostingPermission,
     addPost:(text,tag)=>{requirePostAccess();upd(d=>{d.posts.unshift({id:rid(),by:me,text,tag,t:Date.now(),likes:[],comments:[]});return d})},
     editPost:(id,text,tag)=>upd(d=>{const p=pick(d.posts,id);if(!p||p.by!==me)throw new Error('You can only edit your own post.');p.text=text.trim();p.tag=tag;return d}),
     deletePost:id=>upd(d=>{const index=d.posts.findIndex(p=>p.id===id),p=d.posts[index];if(!p||p.by!==me)throw new Error('You can only delete your own post.');d.posts.splice(index,1);return d}),
@@ -135,11 +140,16 @@ export function SocialProvider({children}){
     })},
     respondConnection:async(id,accept)=>{
       const remote=remoteRequests.find(r=>r.id===id)
-      if(remote&&supabase){const {error}=await supabase.from('connection_requests').update({status:accept?'accepted':'declined'}).eq('id',id);if(error)throw new Error(error.message);return}
+      if(remote&&supabase){
+        const {error}=await supabase.from('connection_requests').update({status:accept?'accepted':'declined'}).eq('id',id)
+        if(error)throw new Error(error.message)
+        setRemoteRequests(current=>current.map(request=>request.id===id?{...request,status:accept?'accepted':'declined'}:request))
+        return
+      }
       upd(d=>{const r=d.requests?.find(x=>x.id===id);if(!r||r.to!==me)return d;r.status=accept?'accepted':'declined';if(accept){d.conn[me]=[...new Set([...(d.conn[me]||[]),r.from])];d.conn[r.from]=[...new Set([...(d.conn[r.from]||[]),me])]};return d})
     },
     connectionStatus:u=>{
-      if((db.conn[me]||[]).includes(u))return 'connected'
+      if(connections.includes(u))return 'connected'
       if(pendingRemoteRequests.has(u))return 'requested'
       if(remoteRequests.some(r=>r.sender_id===user?.authId&&r.recipient_id===people.find(p=>p.uid===u)?.authId&&r.status==='pending'))return 'requested'
       if(remoteRequests.some(r=>r.sender_id===people.find(p=>p.uid===u)?.authId&&r.recipient_id===user?.authId&&r.status==='pending'))return 'incoming'
@@ -158,7 +168,7 @@ export function SocialProvider({children}){
     notificationError,notificationRevision,
     markNotificationsRead:()=>{upd(d=>{(d.notifications||[]).filter(n=>n.to===me).forEach(n=>{n.read=true});return d});if(user?.authId)localStorage.setItem(`uninest.notifications.read.${user.authId}`,String(Date.now()));setMessageNotifications([])},
     thread:o=>db.msgs.filter(m=>(m.a===me&&m.b===o)||(m.a===o&&m.b===me)),
-    partners:()=>[...new Set([...(db.conn[me]||[]),...db.msgs.flatMap(m=>m.a===me?[m.b]:m.b===me?[m.a]:[])])],
+    partners:()=>[...new Set([...connections,...db.msgs.flatMap(m=>m.a===me?[m.b]:m.b===me?[m.a]:[])])],
     send:(o,text)=>upd(d=>{d.msgs.push({id:rid(),a:me,b:o,text,t:Date.now()});return d}),
     addClubEvent:event=>{requirePostAccess();if(!isClubMember)throw new Error('Only registered club email accounts can publish events.');upd(d=>{d.clubEvents.unshift({id:rid(),club:user.name,clubEmail:user.email,comments:[],joins:[],...event});return d})},
     addEventComment:(id,text)=>upd(d=>{const e=pick(d.clubEvents,id);if(e)e.comments.push({id:rid(),by:me,text,t:Date.now()});return d}),
