@@ -230,7 +230,16 @@ export function SocialProvider({children}){
       }
       upd(d=>{d.lostFound??=[];d.lostFound.unshift(post);return d})
     },
-    deleteLostFound:id=>{const item=lostFound.find(value=>value.id===id);if(!item)return;if(item.by!==me&&!user?.email?.endsWith('@uninest.example'))throw new Error('You can only delete your own Lost & Found post.');upd(d=>({...d,lostFound:d.lostFound.filter(value=>value.id!==id)}));if(supabase)supabase.from('lost_found').delete().eq('id',id).eq('by_uid',me)},
+    deleteLostFound:async id=>{
+      const item=lostFound.find(value=>value.id===id)
+      if(!item)return
+      if(item.by!==me&&!user?.email?.endsWith('@uninest.example'))throw new Error('You can only delete your own Lost & Found post.')
+      if(supabase){
+        const {error}=await supabase.from('lost_found').delete().eq('id',id).eq('by_uid',me)
+        if(error)throw new Error(`Could not delete Lost & Found post: ${error.message}`)
+      }
+      upd(d=>({...d,lostFound:d.lostFound.filter(value=>value.id!==id)}))
+    },
     requestLostFoundClaim:async id=>{
       const item=lostFound.find(value=>value.id===id)
       if(!item||item.by===me||item.type!=='found')throw new Error('Only another student can claim a found item.')
@@ -243,7 +252,17 @@ export function SocialProvider({children}){
       upd(d=>{const local=pick(d.lostFound,id);if(local)local.claimRequests=requests;return d})
       return item.by
     },
-    claimLostFound:id=>{const item=lostFound.find(value=>value.id===id);if(!item||item.by!==me)throw new Error('Only the person who found this item can mark it claimed.');if(!item.claimRequests?.length)throw new Error('Wait for the person who lost this item to submit a claim first.');const claimedAt=Date.now();upd(d=>{const local=pick(d.lostFound,id);if(local){local.claimed=true;local.claimedAt=claimedAt}return d});if(supabase)supabase.from('lost_found').update({claimed:true,claimed_at:new Date(claimedAt).toISOString()}).eq('id',id)},
+    claimLostFound:async id=>{
+      const item=lostFound.find(value=>value.id===id)
+      if(!item||item.by!==me)throw new Error('Only the person who found this item can mark it claimed.')
+      if(!item.claimRequests?.length)throw new Error('Wait for the person who lost this item to submit a claim first.')
+      const claimedAt=Date.now()
+      if(supabase){
+        const {error}=await supabase.from('lost_found').update({claimed:true,claimed_at:new Date(claimedAt).toISOString()}).eq('id',id).eq('by_uid',me)
+        if(error)throw new Error(`Could not mark this item as claimed: ${error.message}`)
+      }
+      upd(d=>{const local=pick(d.lostFound,id);if(local){local.claimed=true;local.claimedAt=claimedAt}return d})
+    },
     shared:p=>p.interests.filter(i=>user?.interests?.includes(i))}
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>}
 export const useSocial=()=>useContext(Ctx)

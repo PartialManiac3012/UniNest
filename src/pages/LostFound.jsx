@@ -47,8 +47,8 @@ export default function LostFound(){
       setForm(empty);setNotice('Your lost-and-found post is live.')
     }catch(x){setError(x.message||'Could not save this post. Try removing the photo and posting again.')}
   }
-  const markClaimed=id=>{
-    try{claimLostFound(id);setNotice('Marked as claimed. This post will remain visible for seven days before it is automatically removed.')}catch(x){setError(x.message)}
+  const markClaimed=async id=>{
+    try{await claimLostFound(id);setNotice('Marked as claimed. This post will remain visible for seven days before it is automatically removed.')}catch(x){setError(x.message)}
   }
   const requestClaim=async id=>{
     try{
@@ -74,10 +74,10 @@ export default function LostFound(){
     </section>:<p className="panel p-4 text-sm text-ink-2">Only students verified with an <b>@sudoon.ac.in</b> email can create Lost & Found posts. You can still claim items and message other users.</p>}
     <div className="flex flex-wrap gap-2"><button className={filter==='all'?'btn-primary':'btn-outline'} onClick={()=>setFilter('all')}>All active posts</button><button className={filter==='lost'?'btn-primary':'btn-outline'} onClick={()=>setFilter('lost')}>Lost</button><button className={filter==='found'?'btn-primary':'btn-outline'} onClick={()=>setFilter('found')}>Found</button></div>
     {!visible.length?<p className="panel p-6 text-center text-ink-2">No active posts in this view.</p>:<section className="grid gap-5 lg:grid-cols-2">
-      {visible.map(item=>{const owner=person(item.by),mine=item.by===user.uid,requested=item.claimRequests?.some(x=>x.uid===user.uid),canDelete=mine||isAdmin;return <article key={item.id} className={`card overflow-hidden ${item.claimed?'opacity-75':''}`}>
+      {visible.map(item=>{const owner=person(item.by),mine=item.by===user?.uid,requested=item.claimRequests?.some(x=>x.uid===user?.uid),canDelete=mine||isAdmin;return <article key={item.id} className={`card overflow-hidden ${item.claimed?'opacity-75':''}`}>
         {item.photo&&<img src={item.photo} alt={item.title} className="h-56 w-full object-cover"/>}
         <div className="space-y-3 p-5"><div className="flex items-start justify-between gap-3"><div className="flex gap-2"><span className={item.type==='lost'?'pill':'pill-green'}>{item.type==='lost'?'Lost':'Found'}</span>{item.claimed&&<span className="pill-gold">Claimed</span>}</div><span className="text-xs text-ink-2">{ago(item.created)}</span></div>
-          <div className="flex items-start justify-between gap-3"><h2 className="text-2xl">{item.title}</h2>{canDelete&&<button className="btn-outline !px-2 !py-1 text-xs text-error" onClick={()=>{if(window.confirm('Delete this Lost & Found post?')){try{deleteLostFound(item.id);setNotice('Post deleted.')}catch(x){setError(x.message)}}}}>Delete</button>}</div><p className="text-sm leading-6 text-ink-2">{item.description}</p><p className="text-sm"><b>Location:</b> {item.location}</p>
+          <div className="flex items-start justify-between gap-3"><h2 className="text-2xl">{item.title}</h2>          {canDelete&&<button className="btn-outline !px-2 !py-1 text-xs text-error" onClick={async()=>{if(window.confirm('Delete this Lost & Found post?')){try{await deleteLostFound(item.id);setNotice('Post deleted.')}catch(x){setError(x.message)}}}}>Delete</button>}</div><p className="text-sm leading-6 text-ink-2">{item.description}</p><p className="text-sm"><b>Location:</b> {item.location}</p>
           <div className="flex items-center gap-2 border-t border-outline-variant pt-3 text-sm"><Avatar p={owner} size={32}/><span>Posted by <b>{owner?.name||item.by}</b></span></div>
           {!item.claimed&&item.type==='found'&&!mine&&<button className="btn-primary w-full" disabled={requested} onClick={()=>requestClaim(item.id)}>{requested?'Claim request sent':'Claim this item'}</button>}
           {!item.claimed&&!mine&&<Link to={`/messages?to=${item.by}`} className="btn-outline block w-full text-center">{item.type==='found'?'Message finder':'Message person who lost it'}</Link>}

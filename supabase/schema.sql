@@ -184,6 +184,17 @@ alter table public.lost_found add column if not exists claimed boolean default f
 alter table public.lost_found add column if not exists claim_requests jsonb default '[]'::jsonb;
 alter table public.lost_found add column if not exists claimed_at timestamptz;
 alter table public.lost_found add column if not exists created_at timestamptz default now();
+update public.lost_found set
+  type = lower(coalesce(nullif(type, ''), 'lost')),
+  title = coalesce(title, ''),
+  description = coalesce(description, ''),
+  location = coalesce(location, ''),
+  photo = coalesce(photo, ''),
+  claimed = coalesce(claimed, false),
+  claim_requests = coalesce(claim_requests, '[]'::jsonb),
+  created_at = coalesce(created_at, now())
+where type is null or title is null or description is null or location is null
+   or photo is null or claimed is null or claim_requests is null or created_at is null;
 alter table public.lost_found enable row level security;
 drop policy if exists "Authenticated users can view lost found posts" on public.lost_found;
 drop policy if exists "Users can create their own lost found posts" on public.lost_found;
@@ -208,6 +219,16 @@ with check (
 create policy "Users can delete their own lost found posts"
 on public.lost_found for delete to authenticated
 using (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
+
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.lost_found;
+  exception
+    when duplicate_object then null;
+  end;
+end
+$$;
 
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
