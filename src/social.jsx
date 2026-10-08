@@ -158,8 +158,8 @@ export function SocialProvider({children}){
           id:post.id,by_uid:me,text,tag,likes:[],comments:[],pinned:false
         }
         let {error}=await supabase.from('posts').insert(payload)
-        if(error?.message?.includes('author_id')&&error.message.includes('null value')){
-          ({error}=await supabase.from('posts').insert({...payload,author_id:user.authId}))
+        if(error?.message?.includes('null value in column "author_id"')||error?.message?.includes('null value in column "content"')){
+          ({error}=await supabase.from('posts').insert({...payload,author_id:user.authId,content:text}))
         }
         if(error)throw new Error(`Could not publish post: ${error.message}`)
       }
