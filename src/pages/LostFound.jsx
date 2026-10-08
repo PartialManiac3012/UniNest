@@ -38,11 +38,11 @@ export default function LostFound(){
     if(file.size>MAX_PHOTO_BYTES){setError('Please choose an image under 2MB.');return}
     try{const photo=await readPhoto(file);setForm(current=>({...current,photo}))}catch(x){setError(x.message)}
   }
-  const submit=e=>{
+  const submit=async e=>{
     e.preventDefault();setError('');setNotice('')
     if(!form.title.trim()||!form.description.trim()||!form.location.trim()){setError('Add the item, description, and last-seen/found location.');return}
     try{
-      addLostFound({...form,title:form.title.trim(),description:form.description.trim(),location:form.location.trim()})
+      await addLostFound({...form,title:form.title.trim(),description:form.description.trim(),location:form.location.trim()})
       setForm(empty);setNotice('Your lost-and-found post is live.')
     }catch(x){setError(x.message||'Could not save this post. Try removing the photo and posting again.')}
   }

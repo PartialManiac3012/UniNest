@@ -217,7 +217,18 @@ export function SocialProvider({children}){
     addClubEvent:event=>{requirePostAccess();if(!isClubMember)throw new Error('Only registered club email accounts can publish events.');upd(d=>{d.clubEvents.unshift({id:rid(),club:user.name,clubEmail:user.email,comments:[],joins:[],...event});return d})},
     addEventComment:(id,text)=>upd(d=>{const e=pick(d.clubEvents,id);if(e)e.comments.push({id:rid(),by:me,text,t:Date.now()});return d}),
     joinClubEvent:(id,details)=>upd(d=>{const e=pick(d.clubEvents,id);if(e&&!e.joins.some(x=>x.uid===me))e.joins.push({uid:me,...details,t:Date.now()});return d}),
-    addLostFound:item=>{requirePostAccess();const post={id:rid(),by:me,created:Date.now(),claimed:false,claimRequests:[],...item};upd(d=>{d.lostFound??=[];d.lostFound.unshift(post);return d});if(supabase)supabase.from('lost_found').insert({id:post.id,by_uid:me,type:post.type,title:post.title,description:post.description,location:post.location,photo:post.photo,claimed:false,claim_requests:[]})},
+    addLostFound:async item=>{
+      requirePostAccess()
+      const post={id:rid(),by:me,created:Date.now(),claimed:false,claimRequests:[],...item}
+      if(supabase){
+        const {error}=await supabase.from('lost_found').insert({
+          id:post.id,by_uid:me,type:post.type,title:post.title,description:post.description,
+          location:post.location,photo:post.photo||'',claimed:false,claim_requests:[]
+        })
+        if(error)throw new Error(`Could not publish Lost & Found post: ${error.message}`)
+      }
+      upd(d=>{d.lostFound??=[];d.lostFound.unshift(post);return d})
+    },
     deleteLostFound:id=>{const item=lostFound.find(value=>value.id===id);if(!item)return;if(item.by!==me&&!user?.email?.endsWith('@uninest.example'))throw new Error('You can only delete your own Lost & Found post.');upd(d=>({...d,lostFound:d.lostFound.filter(value=>value.id!==id)}));if(supabase)supabase.from('lost_found').delete().eq('id',id).eq('by_uid',me)},
     requestLostFoundClaim:id=>{const item=lostFound.find(value=>value.id===id);if(!item||item.by===me||item.type!=='found')throw new Error('Only another student can claim a found item.');const requests=[...(item.claimRequests||[]),{uid:me,t:Date.now()}];upd(d=>{const local=pick(d.lostFound,id);if(local)local.claimRequests=requests;return d});if(supabase)supabase.from('lost_found').update({claim_requests:requests}).eq('id',id)},
     claimLostFound:id=>{const item=lostFound.find(value=>value.id===id);if(!item||item.by!==me)throw new Error('Only the person who found this item can mark it claimed.');if(!item.claimRequests?.length)throw new Error('Wait for the person who lost this item to submit a claim first.');const claimedAt=Date.now();upd(d=>{const local=pick(d.lostFound,id);if(local){local.claimed=true;local.claimedAt=claimedAt}return d});if(supabase)supabase.from('lost_found').update({claimed:true,claimed_at:new Date(claimedAt).toISOString()}).eq('id',id)},
