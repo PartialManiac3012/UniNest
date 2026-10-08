@@ -145,6 +145,10 @@ alter table public.posts add column if not exists likes text[] default '{}';
 alter table public.posts add column if not exists comments jsonb default '[]'::jsonb;
 alter table public.posts add column if not exists pinned boolean default false;
 alter table public.posts add column if not exists created_at timestamptz default now();
+update public.posts p
+set by_uid = coalesce(p.by_uid, owner.uid)
+from public.profiles owner
+where p.by_uid is null and p.author_id = owner.id;
 update public.posts set
   tag = coalesce(nullif(tag, ''), 'General'),
   likes = coalesce(likes, '{}'),
@@ -165,7 +169,7 @@ on public.posts for insert to authenticated
 with check (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
 create policy "Users can update their own posts"
 on public.posts for update to authenticated
-using (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()))
+using (true)
 with check (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
 create policy "Users can delete their own posts"
 on public.posts for delete to authenticated
