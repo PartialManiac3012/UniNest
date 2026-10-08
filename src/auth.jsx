@@ -60,6 +60,7 @@ export function AuthProvider({children}){
     const uid=idFromEmail(email)
     const {data,error}=await supabase.auth.signUp({email:norm(email),password,options:{data:{uid,name:name.trim(),college:college.trim(),year,stream,interests,avatar,phone:phone.trim(),bio:'',skills:''}}})
     if(error)throw new Error(error.message)
+    if(!data.user)throw new Error('Supabase did not return a user after signup. Please try again.')
     if(!data.session)return {requiresConfirmation:true,email:norm(email)}
     const profile=profileFromUser(data.user)
     saveLocalProfile(profile)

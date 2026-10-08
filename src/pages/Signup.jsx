@@ -29,6 +29,12 @@ export default function Signup(){
   const run=fn=>async e=>{e.preventDefault();setErr('');setBusy(true);try{await fn()}catch(x){setErr(x.message)}setBusy(false)}
   const send=run(async()=>{if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email.trim()))throw new Error('Enter a valid email address.');setStep(1)})
   const create=run(async()=>{
+    if(!f.name.trim())throw new Error('Enter your full name.')
+    if(!f.college.trim())throw new Error('Enter your college.')
+    if(!f.year)throw new Error('Select your year.')
+    if(!f.stream)throw new Error('Select your stream.')
+    if(!f.phone.trim())throw new Error('Enter your phone number.')
+    if(!f.interests.length)throw new Error('Choose at least one interest.')
     if(f.password!==f.confirm)throw new Error('The two passwords do not match.')
     if(!accepted)throw new Error('Please read and accept the Privacy Policy before creating your UniNest ID.')
     const result=await createAccount(f)
@@ -70,5 +76,5 @@ export default function Signup(){
           <button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)} className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-2"><Icon n={show?'visibility_off':'visibility'}/></button></div></div>
         <div><label className="label" htmlFor="p2">Confirm password</label><input id="p2" type={show?'text':'password'} className="field" autoComplete="new-password" value={f.confirm} onChange={set('confirm')} required/></div>
         <label className="flex items-start gap-2 text-sm text-ink-2"><input type="checkbox" className="mt-1 accent-primary-container" checked={accepted} onChange={e=>setAccepted(e.target.checked)} required/><span>I have read and agree to the <Link to="/privacy-policy" className="font-semibold text-primary-container underline underline-offset-4">Privacy Policy</Link>.</span></label>
-        <button className="btn-primary w-full" disabled={busy||!f.name||!f.college||!f.stream||f.password.length<8||!f.interests.length||!accepted}>{busy?'Creating…':'Create my account'}</button></form>}</>}
+        <button className="btn-primary w-full" disabled={busy}>{busy?'Creating…':'Create my account'}</button></form>}</>}
     </div></div>}
