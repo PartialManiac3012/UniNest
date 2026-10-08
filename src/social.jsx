@@ -68,12 +68,12 @@ export function SocialProvider({children}){
       const {data,error}=await supabase.from('messages').select('id,sender_id,created_at').eq('recipient_id',user.authId).gt('created_at',new Date(since).toISOString()).order('created_at',{ascending:false}).limit(30)
       if(active){
         if(error)setNotificationError(error.message)
-        else {setMessageNotifications((data||[]).map(m=>({id:`message-${m.id}`,type:'message',from:m.sender_id,t:m.created_at,person:remotePeople.find(p=>p.authId===m.sender_id)})));setNotificationRevision(value=>value+1)}
+        else {setMessageNotifications((data||[]).map(m=>{const person=remotePeople.find(p=>p.authId===m.sender_id);return {id:`message-${m.id}`,type:'message',from:person?.uid||m.sender_id,t:m.created_at,person}}));setNotificationRevision(value=>value+1)}
       }
     }
     load()
     const channel=supabase.channel(`notifications:${user.authId}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`recipient_id=eq.${user.authId}`},payload=>{
-      if(active){setMessageNotifications(current=>current.some(n=>n.id===`message-${payload.new.id}`)?current:[{id:`message-${payload.new.id}`,type:'message',from:payload.new.sender_id,t:payload.new.created_at,person:remotePeople.find(p=>p.authId===payload.new.sender_id)},...current]);setNotificationRevision(value=>value+1)}
+      if(active){const person=remotePeople.find(p=>p.authId===payload.new.sender_id);setMessageNotifications(current=>current.some(n=>n.id===`message-${payload.new.id}`)?current:[{id:`message-${payload.new.id}`,type:'message',from:person?.uid||payload.new.sender_id,t:payload.new.created_at,person},...current]);setNotificationRevision(value=>value+1)}
     }).subscribe()
     return()=>{active=false;supabase.removeChannel(channel)}
   },[user?.authId,remotePeople])
