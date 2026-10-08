@@ -251,6 +251,26 @@ export function SocialProvider({children}){
       d.notifications.push({id:rid(),to:u,type:'connection',from:me,read:false,t:Date.now()})
       return d
     })},
+    disconnect:async u=>{
+    const target=people.find(p=>p.uid===u)
+    if(supabase&&user?.authId&&target?.authId){
+      const request=remoteRequests.find(r=>r.status==='accepted'&&(
+        (r.sender_id===user.authId&&r.recipient_id===target.authId)||
+        (r.sender_id===target.authId&&r.recipient_id===user.authId)
+      ))
+      if(request){
+        const {error}=await supabase.from('connection_requests').delete().eq('id',request.id)
+        if(error)throw new Error(`Could not disconnect: ${error.message}`)
+        setRemoteRequests(current=>current.filter(item=>item.id!==request.id))
+      }
+      return
+    }
+    upd(d=>{
+      d.conn[me]=(d.conn[me]||[]).filter(id=>id!==u)
+      d.conn[u]=(d.conn[u]||[]).filter(id=>id!==me)
+      return d
+    })
+    },
     respondConnection:async(id,accept)=>{
       const remote=remoteRequests.find(r=>r.id===id)
       if(remote&&supabase){

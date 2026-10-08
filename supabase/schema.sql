@@ -357,6 +357,7 @@ alter table public.connection_requests enable row level security;
 drop policy if exists "Users can view their connection requests" on public.connection_requests;
 drop policy if exists "Users can send connection requests" on public.connection_requests;
 drop policy if exists "Recipients can respond to connection requests" on public.connection_requests;
+drop policy if exists "Users can disconnect connections" on public.connection_requests;
 create policy "Users can view their connection requests"
 on public.connection_requests for select to authenticated
 using (auth.uid() = sender_id or auth.uid() = recipient_id);
@@ -367,6 +368,9 @@ create policy "Recipients can respond to connection requests"
 on public.connection_requests for update to authenticated
 using (auth.uid() = recipient_id)
 with check (auth.uid() = recipient_id);
+create policy "Users can disconnect connections"
+on public.connection_requests for delete to authenticated
+using (auth.uid() = sender_id or auth.uid() = recipient_id);
 
 do $$
 begin

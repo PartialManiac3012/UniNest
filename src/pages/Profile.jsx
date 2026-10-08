@@ -14,7 +14,7 @@ const toDataUrl=file=>new Promise((resolve,reject)=>{
 export default function Profile(){
   const {uid}=useParams(),{user,updateProfile}=useAuth(),s=useSocial(),p=s.person(uid)
   const own=!!user&&uid===user.uid
-  const [edit,setEdit]=useState(false),[d,setD]=useState(null),[err,setErr]=useState(''),[saving,setSaving]=useState(false)
+  const [edit,setEdit]=useState(false),[d,setD]=useState(null),[err,setErr]=useState(''),[saving,setSaving]=useState(false),[disconnecting,setDisconnecting]=useState(false)
   if(!user)return <p className="panel p-6">Loading your profile…</p>
   if(!p)return <div className="mx-auto max-w-3xl"><div className="panel p-6 text-base"><span>No student with the ID @{uid}.</span> <Link to="/discover" className="font-semibold underline underline-offset-4">Back to Discover</Link></div></div>
   const start=()=>{setD({bio:p.bio||'',skills:p.skills||'',interests:p.interests||[],avatar:p.avatar||'',stream:p.stream||''});setErr('');setEdit(true)}
@@ -37,9 +37,13 @@ export default function Profile(){
     catch(x){setErr(x.message||'Could not save your profile.')}
     finally{setSaving(false)}
   }
+  const disconnect=async()=>{
+    setErr('');setDisconnecting(true)
+    try{await s.disconnect(uid)}catch(x){setErr(x.message||'Could not disconnect this user.')}finally{setDisconnecting(false)}
+  }
   return <div className="mx-auto max-w-3xl space-y-6">
    <header className="panel flex flex-wrap items-center gap-4 p-6"><Avatar p={p} size={64}/><div className="flex-1"><h1 className="text-3xl">{p.name}<VerifiedBadge verified={own?s.canPost:p.verified}/></h1><p className="text-sm text-ink-2">@{p.uid} · {p.year} · {p.college}{p.stream&&<> · {p.stream}</>}</p></div>
-    {own?<button className="btn-outline" onClick={edit?()=>setEdit(false):start}>{edit?'Cancel':'Edit profile'}</button>:<div className="flex gap-2"><button onClick={()=>s.toggleConnect(uid)} aria-pressed={c} disabled={s.connectionStatus(uid)!=='none'} className={c?'btn-outline':'btn-primary'}>{c?'Connected':s.connectionStatus(uid)==='requested'?'Request sent':s.connectionStatus(uid)==='incoming'?'Check notifications':'Connect'}</button>{c&&<Link to={`/messages?to=${uid}`} className="btn-outline">Message</Link>}</div>}</header>
+    {own?<button className="btn-outline" onClick={edit?()=>setEdit(false):start}>{edit?'Cancel':'Edit profile'}</button>:<div className="flex flex-wrap gap-2"><button onClick={c?disconnect:()=>s.toggleConnect(uid)} aria-pressed={c} disabled={disconnecting||(!c&&s.connectionStatus(uid)!=='none')} className={c?'btn-outline':'btn-primary'}>{disconnecting?'Disconnecting…':c?'Disconnect':s.connectionStatus(uid)==='requested'?'Request sent':s.connectionStatus(uid)==='incoming'?'Check notifications':'Connect'}</button>{c&&<Link to={`/messages?to=${uid}`} className="btn-outline">Message</Link>}</div>}</header>
    {own&&<section className="panel flex flex-wrap items-center gap-4 p-6"><div className="flex-1"><h2 className="text-lg font-semibold">Student verification</h2><p className="mt-1 text-sm text-ink-2">{s.canPost?'Your student account is verified. You can create posts, teams, club events, and Lost & Found listings.':'Use your verified student account to create posts. Verification is checked using your Supabase student verification function.'}</p><p className="mt-2 text-xs text-ink-2">{user.email}</p>{s.postingPermissionError&&<p role="alert" className="mt-2 text-sm text-error">Verification check failed: {s.postingPermissionError}</p>}</div><div className="flex items-center gap-3">{s.canPost?<span className="pill-green">Verified <VerifiedBadge verified/></span>:<span className="pill">Not verified</span>}<button className="btn-outline" onClick={()=>s.refreshPostingPermission()}>Check status</button></div></section>}
    {edit?<form onSubmit={save} className="panel space-y-4 p-6">
     {err&&<p role="alert" className="rounded border border-error bg-error-wash p-3 text-sm text-error">{err}</p>}
