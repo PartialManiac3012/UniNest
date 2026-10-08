@@ -194,7 +194,7 @@ export function SocialProvider({children}){
       const comment={id:rid(),by:me,text,t:Date.now()}
       const comments=[...(post.comments||[]),comment]
       if(supabase){
-        const {error}=await supabase.from('posts').update({comments}).eq('id',id)
+        const {error}=await supabase.rpc('update_post_comments',{p_post_id:id,p_comments:comments})
         if(error)throw new Error(`Could not save reply: ${error.message}`)
         setRemotePosts(current=>current.map(item=>item.id===id?{...item,comments}:item))
       }
@@ -208,7 +208,7 @@ export function SocialProvider({children}){
       if(!comment||comment.by!==me)throw new Error('You can only delete your own comment.')
       const comments=item.comments.filter((_,i)=>i!==index)
       if(supabase&&surface==='post'){
-        const {error}=await supabase.from('posts').update({comments}).eq('id',itemId)
+        const {error}=await supabase.rpc('update_post_comments',{p_post_id:itemId,p_comments:comments})
         if(error)throw new Error(`Could not delete reply: ${error.message}`)
         setRemotePosts(current=>current.map(post=>post.id===itemId?{...post,comments}:post))
       }
