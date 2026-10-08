@@ -6,8 +6,8 @@ import {supabase} from '../lib/supabase.js'
 import {Avatar,ago,VerifiedBadge} from '../components/ui.jsx'
 
 export default function Messages(){
-  const {user,isVerifiedStudent}=useAuth(),s=useSocial(),[sp,setSp]=useSearchParams(),to=sp.get('to'),[text,setText]=useState(''),[messages,setMessages]=useState([]),[error,setError]=useState(''),[sending,setSending]=useState(false),end=useRef(null)
-  const canMessagePerson=p=>!!p&&s.conns.includes(p.uid)&&(!p.verified||isVerifiedStudent)
+  const {user}=useAuth(),s=useSocial(),[sp,setSp]=useSearchParams(),to=sp.get('to'),[text,setText]=useState(''),[messages,setMessages]=useState([]),[error,setError]=useState(''),[sending,setSending]=useState(false),end=useRef(null)
+  const canMessagePerson=p=>!!p&&s.conns.includes(p.uid)
   const ids=[...(to?[to]:[]),...s.people.filter(p=>p.uid!==s.me&&p.authId&&canMessagePerson(p)).map(p=>p.uid)].filter((u,i,a)=>a.indexOf(u)===i)
   const requestedPerson=to?s.person(to):null
   const cur=requestedPerson&&canMessagePerson(requestedPerson)?to:ids[0],person=cur?s.person(cur):null
@@ -36,7 +36,6 @@ export default function Messages(){
     if(!user?.authId){setError('Your Supabase session is missing. Log out and log in again.');return}
     if(!person?.authId){setError('This profile is not synced with Supabase yet. Ask this user to log in once through the new UniNest login, then refresh Discover before messaging.');return}
     if(!s.conns.includes(person.uid)){setError('Accept the connection request before messaging this user.');return}
-    if(!isVerifiedStudent&&person.verified){setError('Non-verified users cannot directly message verified students.');return}
     setError('')
     setSending(true)
     const {data,error:sendError}=await supabase.from('messages').insert({sender_id:user.authId,recipient_id:person.authId,body}).select().single()

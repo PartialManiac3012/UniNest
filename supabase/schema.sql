@@ -189,26 +189,36 @@ as $$
   select public.is_verified_auth_user(auth.uid());
 $$;
 grant execute on function public.is_verified_student() to authenticated;
+create or replace function public.is_connected_user(other_user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.connection_requests
+    where status = 'accepted'
+      and (
+        (sender_id = auth.uid() and recipient_id = other_user_id)
+        or (sender_id = other_user_id and recipient_id = auth.uid())
+      )
+  );
+$$;
+grant execute on function public.is_connected_user(uuid) to authenticated;
 drop policy if exists "Users can read their own messages" on public.messages;
 drop policy if exists "Users can send messages as themselves" on public.messages;
 create policy "Users can read their own messages"
 on public.messages for select to authenticated
 using (
   (auth.uid() = sender_id or auth.uid() = recipient_id)
-  and (
-    public.is_verified_auth_user(auth.uid())
-    or public.is_verified_auth_user(sender_id)
-    or not public.is_verified_auth_user(recipient_id)
-  )
+  and public.is_connected_user(case when auth.uid() = sender_id then recipient_id else sender_id end)
 );
 create policy "Users can send messages as themselves"
 on public.messages for insert to authenticated
 with check (
   auth.uid() = sender_id
-  and (
-    public.is_verified_auth_user(sender_id)
-    or not public.is_verified_auth_user(recipient_id)
-  )
+  and public.is_connected_user(recipient_id)
 );
 
 do $$
