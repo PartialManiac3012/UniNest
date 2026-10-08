@@ -186,7 +186,6 @@ export function SocialProvider({children}){
       setRemotePosts(current=>current.filter(item=>item.id!==id))
       upd(d=>({...d,posts:d.posts.filter(p=>p.id!==id)}))
     },
-    pinPost:id=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only pin your own post.');const pinned=!post.pinned;upd(d=>{const p=pick(d.posts,id);if(p)p.pinned=pinned;return d});if(supabase)supabase.from('posts').update({pinned}).eq('id',id).eq('by_uid',me)},
     toggleLike:async id=>{
       const post=posts.find(item=>item.id===id)
       if(!post)return
