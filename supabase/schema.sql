@@ -160,6 +160,47 @@ create policy "Users can delete their own posts"
 on public.posts for delete to authenticated
 using (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
 
+create table if not exists public.lost_found (
+  id text primary key,
+  by_uid text not null references public.profiles(uid) on delete cascade,
+  type text not null check (type in ('lost','found')),
+  title text not null,
+  description text not null,
+  location text not null,
+  photo text not null default '',
+  claimed boolean not null default false,
+  claim_requests jsonb not null default '[]'::jsonb,
+  claimed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table public.lost_found enable row level security;
+drop policy if exists "Authenticated users can view lost found posts" on public.lost_found;
+drop policy if exists "Users can create their own lost found posts" on public.lost_found;
+drop policy if exists "Users can update lost found posts" on public.lost_found;
+drop policy if exists "Users can delete their own lost found posts" on public.lost_found;
+create policy "Authenticated users can view lost found posts"
+on public.lost_found for select to authenticated using (true);
+create policy "Users can create their own lost found posts"
+on public.lost_found for insert to authenticated
+with check (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
+create policy "Users can update lost found posts"
+on public.lost_found for update to authenticated
+using (
+  exists (select 1 from public.profiles where uid = by_uid and id = auth.uid())
+  or claim_requests @> jsonb_build_array(jsonb_build_object(
+    'uid', (select uid from public.profiles where id = auth.uid())
+  ))
+)
+with check (
+  exists (select 1 from public.profiles where uid = by_uid and id = auth.uid())
+  or claim_requests @> jsonb_build_array(jsonb_build_object(
+    'uid', (select uid from public.profiles where id = auth.uid())
+  ))
+);
+create policy "Users can delete their own lost found posts"
+on public.lost_found for delete to authenticated
+using (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
+
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   sender_id uuid not null references auth.users(id) on delete cascade,
