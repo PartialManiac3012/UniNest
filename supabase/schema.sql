@@ -170,7 +170,10 @@ with check (exists (select 1 from public.profiles where uid = by_uid and id = au
 create policy "Users can update their own posts"
 on public.posts for update to authenticated
 using (true)
-with check (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
+with check (
+  exists (select 1 from public.profiles where uid = by_uid and id = auth.uid())
+  or author_id = auth.uid()
+);
 create policy "Users can delete their own posts"
 on public.posts for delete to authenticated
 using (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
