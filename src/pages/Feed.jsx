@@ -17,7 +17,10 @@ function Post({p}){
 export default function Feed(){
   const {user,isAdmin,banEmail}=useAuth(),s=useSocial(),[t,setT]=useState(''),[tag,setTag]=useState('General'),[mine,setMine]=useState(false),[error,setError]=useState('')
   const mi=user.interests||[],posts=s.posts.filter(p=>!mine||mi.includes(p.tag)||s.conns.includes(p.by)||p.by===s.me)
-  const sugg=s.people.filter(p=>p.uid!==s.me&&!s.conns.includes(p.uid)).sort((a,b)=>s.shared(b).length-s.shared(a).length).slice(0,3)
+  const sugg=s.people.filter(p=>p.uid!==s.me).sort((a,b)=>{
+    const aConnected=s.conns.includes(a.uid),bConnected=s.conns.includes(b.uid)
+    return Number(bConnected)-Number(aConnected)||s.shared(b).length-s.shared(a).length
+  }).slice(0,3)
   return <div className="grid gap-8 lg:grid-cols-12">
    <aside className="space-y-4 lg:col-span-3"><div className="panel p-4"><Avatar p={user} size={48}/><Link to={`/u/${user.uid}`} className="mt-2 block font-serif text-xl font-semibold hover:text-primary-container">{user.name}</Link><p className="text-xs text-ink-2">@{user.uid} · {user.college}</p>
     <div className="mt-3 flex flex-wrap gap-1">{mi.map(i=><span key={i} className="pill">{i}</span>)}</div><p className="mt-3 text-sm text-ink-2">{s.conns.length} connections</p></div></aside>
