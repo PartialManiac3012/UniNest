@@ -60,11 +60,17 @@ export function AuthProvider({children}){
     const uid=idFromEmail(email)
     const {data,error}=await supabase.auth.signUp({email:norm(email),password,options:{data:{uid,name:name.trim(),college:college.trim(),year,stream,interests,avatar,phone:phone.trim(),bio:'',skills:''}}})
     if(error)throw new Error(error.message)
-    if(!data.session)throw new Error('Account created. Check your email and click the confirmation link before logging in.')
+    if(!data.session)return {requiresConfirmation:true,email:norm(email)}
     const profile=profileFromUser(data.user)
     saveLocalProfile(profile)
     await saveSupabaseProfile(profile)
     setUser(profile)
+    return {requiresConfirmation:false,email:norm(email)}
+  }
+  const resendConfirmation=async email=>{
+    if(!supabase)throw new Error('Supabase is not configured.')
+    const {error}=await supabase.auth.resend({type:'signup',email:norm(email)})
+    if(error)throw new Error(`Could not resend confirmation email: ${error.message}`)
   }
   const login=async(idOrEmail,password)=>{
     if(!supabase)throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.')
@@ -104,7 +110,7 @@ export function AuthProvider({children}){
     if(supabase)await supabase.auth.signOut()
     setUser(null)
   }
-  const api={user,isAdmin:!!user&&ADMIN_EMAILS.includes(user.email),isVerifiedStudent:!!user&&isVerifiedEmail(user.email),previewId:idFromEmail,createAccount,login,updateProfile,banEmail,logout,loading}
+  const api={user,isAdmin:!!user&&ADMIN_EMAILS.includes(user.email),isVerifiedStudent:!!user&&isVerifiedEmail(user.email),previewId:idFromEmail,createAccount,resendConfirmation,login,updateProfile,banEmail,logout,loading}
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>
 }
 export const useAuth=()=>useContext(Ctx)

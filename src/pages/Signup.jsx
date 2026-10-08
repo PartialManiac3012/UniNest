@@ -13,8 +13,8 @@ const toDataUrl=file=>new Promise((resolve,reject)=>{
   r.readAsDataURL(file)
 })
 export default function Signup(){
-  const {createAccount,previewId}=useAuth(),nav=useNavigate()
-  const [step,setStep]=useState(0),[err,setErr]=useState(''),[busy,setBusy]=useState(false),[show,setShow]=useState(false),[accepted,setAccepted]=useState(false)
+  const {createAccount,resendConfirmation,previewId}=useAuth(),nav=useNavigate()
+  const [step,setStep]=useState(0),[err,setErr]=useState(''),[busy,setBusy]=useState(false),[show,setShow]=useState(false),[accepted,setAccepted]=useState(false),[confirmationSent,setConfirmationSent]=useState(false),[resent,setResent]=useState(false)
   const [f,setF]=useState({email:'',code:'',name:'',college:'',year:years[0],stream:'',password:'',confirm:'',interests:[],avatar:'',phone:''})
   const set=k=>e=>setF({...f,[k]:e.target.value})
   const onAvatar=async e=>{
@@ -31,7 +31,10 @@ export default function Signup(){
   const create=run(async()=>{
     if(f.password!==f.confirm)throw new Error('The two passwords do not match.')
     if(!accepted)throw new Error('Please read and accept the Privacy Policy before creating your UniNest ID.')
-    await createAccount(f);nav('/feed',{replace:true})})
+    const result=await createAccount(f)
+    if(result?.requiresConfirmation){setConfirmationSent(true);return}
+    nav('/feed',{replace:true})})
+  const resend=run(async()=>{await resendConfirmation(f.email);setResent(true)})
   return <div className="grid gap-10 py-4 lg:grid-cols-2">
     <div><h1 className="text-4xl md:text-5xl">Create your UniNest ID</h1>
       <p className="mt-3 max-w-md text-ink-2 leading-7">Your ID is made from your email, so it takes about a minute: confirm your email, then tell us a little about you.</p>
@@ -40,7 +43,8 @@ export default function Signup(){
       <p className="mt-8 text-sm text-ink-2">Already have an ID? <Link to="/login" className="font-semibold text-primary-container underline underline-offset-4">Log in</Link></p></div>
     <div className="panel p-6">
       {err&&<p role="alert" className="mb-4 rounded border border-error bg-error-wash p-3 text-sm text-error">{err}</p>}
-      {step===0&&<form onSubmit={send} className="space-y-4" noValidate><h2 className="text-2xl">Enter your email</h2>
+      {confirmationSent?<section className="space-y-4" aria-live="polite"><h2 className="text-2xl">Check your email</h2><p className="text-sm leading-6 text-ink-2">We sent a confirmation link to <b className="text-ink">{f.email}</b>. Open it to confirm your account, then log in.</p>{resent&&<p role="status" className="rounded border border-secondary bg-secondary/10 p-3 text-sm">A new confirmation email was sent.</p>}<button className="btn-primary w-full" onClick={resend} disabled={busy}>{busy?'Sending…':'Resend confirmation email'}</button><Link to="/login" className="btn-outline block w-full text-center">Go to login</Link></section>:
+      <>{step===0&&<form onSubmit={send} className="space-y-4" noValidate><h2 className="text-2xl">Enter your email</h2>
         <div><label className="label" htmlFor="em">Email address</label><input id="em" type="email" className="field" autoComplete="email" placeholder="you@college.edu" value={f.email} onChange={set('email')} required/></div>
         {f.email.includes('@')&&<p className="text-sm text-ink-2">Your ID will be <b className="text-ink">@{previewId(f.email)}</b></p>}
         <button className="btn-primary w-full" disabled={busy||!f.email}>{busy?'Sending…':'Send verification code'}</button></form>}
@@ -66,5 +70,5 @@ export default function Signup(){
           <button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)} className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-2"><Icon n={show?'visibility_off':'visibility'}/></button></div></div>
         <div><label className="label" htmlFor="p2">Confirm password</label><input id="p2" type={show?'text':'password'} className="field" autoComplete="new-password" value={f.confirm} onChange={set('confirm')} required/></div>
         <label className="flex items-start gap-2 text-sm text-ink-2"><input type="checkbox" className="mt-1 accent-primary-container" checked={accepted} onChange={e=>setAccepted(e.target.checked)} required/><span>I have read and agree to the <Link to="/privacy-policy" className="font-semibold text-primary-container underline underline-offset-4">Privacy Policy</Link>.</span></label>
-        <button className="btn-primary w-full" disabled={busy||!f.name||!f.college||!f.stream||f.password.length<8||!f.interests.length||!accepted}>{busy?'Creating…':'Create my account'}</button></form>}
+        <button className="btn-primary w-full" disabled={busy||!f.name||!f.college||!f.stream||f.password.length<8||!f.interests.length||!accepted}>{busy?'Creating…':'Create my account'}</button></form>}</>}
     </div></div>}
