@@ -7,6 +7,12 @@ const K='uninest.social',H=36e5,CLAIM_RETENTION=7*24*H,rid=()=>Math.random().toS
 const SAMPLE_IDS=new Set(['p1','p2','p3','t1','t2','t3','ce1','ce2'])
 const SAMPLE_USERS=new Set(['aditi.v','kartik.s','sneha.p','ananya.s','rohan.m','priyanshu.d'])
 const emptyDb=()=>({posts:[],teams:[],conn:{},requests:[],notifications:[],msgs:[],clubEvents:[],lostFound:[],commentReports:[]})
+const notificationFailure=error=>{
+  const message=error?.message||''
+  return message.toLowerCase().includes('failed to fetch')
+    ? 'Notifications are temporarily unavailable. Check your connection and try again.'
+    : message||'Could not load notifications. Please try again.'
+}
 const cleanSampleData=db=>({
   ...emptyDb(),
   ...db,
@@ -32,6 +38,7 @@ export function SocialProvider({children}){
   const [pendingRemoteRequests,setPendingRemoteRequests]=useState(()=>new Set())
   const [notificationError,setNotificationError]=useState('')
   const [notificationRevision,setNotificationRevision]=useState(0)
+  const [notificationRetry,setNotificationRetry]=useState(0)
   useEffect(()=>{localStorage.setItem(K,JSON.stringify(db))},[db])
   useEffect(()=>{setDb(d=>{const items=d.lostFound||[],active=items.filter(item=>!item.claimed||!item.claimedAt||Date.now()-item.claimedAt<CLAIM_RETENTION);return active.length===items.length?d:{...d,lostFound:active}})},[])
   const loadPostingPermission=async()=>{
@@ -48,17 +55,17 @@ export function SocialProvider({children}){
     const load=async()=>{
       const {data,error}=await supabase.from('connection_requests').select('*').or(`sender_id.eq.${user.authId},recipient_id.eq.${user.authId}`)
       if(active){
-        if(error)setNotificationError(error.message)
+        if(error)setNotificationError(notificationFailure(error))
         else {setRemoteRequests(data||[]);setNotificationError('');setNotificationRevision(value=>value+1)}
       }
     }
-    load()
+    load().catch(error=>{if(active)setNotificationError(notificationFailure(error))})
     const channel=supabase.channel(`connection-requests:${user.authId}`)
       .on('postgres_changes',{event:'*',schema:'public',table:'connection_requests'},payload=>{
         if(payload.new?.sender_id===user.authId||payload.new?.recipient_id===user.authId)load()
       }).subscribe()
     return()=>{active=false;supabase.removeChannel(channel)}
-  },[user?.authId])
+  },[user?.authId,notificationRetry])
   useEffect(()=>{
     if(!supabase||!user?.authId){setMessageNotifications([]);return}
     let active=true
@@ -67,16 +74,16 @@ export function SocialProvider({children}){
       const since=Number(localStorage.getItem(key)||0)
       const {data,error}=await supabase.from('messages').select('id,sender_id,created_at').eq('recipient_id',user.authId).gt('created_at',new Date(since).toISOString()).order('created_at',{ascending:false}).limit(30)
       if(active){
-        if(error)setNotificationError(error.message)
+        if(error)setNotificationError(notificationFailure(error))
         else {setMessageNotifications((data||[]).map(m=>{const person=remotePeople.find(p=>p.authId===m.sender_id);return {id:`message-${m.id}`,type:'message',from:person?.uid||m.sender_id,t:m.created_at,person}}));setNotificationRevision(value=>value+1)}
       }
     }
-    load()
+    load().catch(error=>{if(active)setNotificationError(notificationFailure(error))})
     const channel=supabase.channel(`notifications:${user.authId}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`recipient_id=eq.${user.authId}`},payload=>{
       if(active){const person=remotePeople.find(p=>p.authId===payload.new.sender_id);setMessageNotifications(current=>current.some(n=>n.id===`message-${payload.new.id}`)?current:[{id:`message-${payload.new.id}`,type:'message',from:person?.uid||payload.new.sender_id,t:payload.new.created_at,person},...current]);setNotificationRevision(value=>value+1)}
     }).subscribe()
     return()=>{active=false;supabase.removeChannel(channel)}
-  },[user?.authId,remotePeople])
+  },[user?.authId,remotePeople,notificationRetry])
   useEffect(()=>{
     if(!supabase){setRemoteProfilesLoaded(true);return}
     let active=true
@@ -165,7 +172,7 @@ export function SocialProvider({children}){
       ...(db.requests||[]).filter(r=>r.to===me&&r.status==='pending').map(r=>({...r,person:people.find(p=>p.uid===r.from)})),
       ...remoteRequests.filter(r=>r.recipient_id===user?.authId&&r.status==='pending').map(r=>({...r,from:people.find(p=>p.authId===r.sender_id)?.uid,person:people.find(p=>p.authId===r.sender_id)}))
     ],
-    notificationError,notificationRevision,
+    notificationError,notificationRevision,retryNotifications:()=>setNotificationRetry(value=>value+1),
     markNotificationsRead:()=>{upd(d=>{(d.notifications||[]).filter(n=>n.to===me).forEach(n=>{n.read=true});return d});if(user?.authId)localStorage.setItem(`uninest.notifications.read.${user.authId}`,String(Date.now()));setMessageNotifications([])},
     thread:o=>db.msgs.filter(m=>(m.a===me&&m.b===o)||(m.a===o&&m.b===me)),
     partners:()=>[...new Set([...connections,...db.msgs.flatMap(m=>m.a===me?[m.b]:m.b===me?[m.a]:[])])],
