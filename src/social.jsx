@@ -16,7 +16,7 @@ const notificationFailure=error=>{
 const cleanSampleData=db=>({
   ...emptyDb(),
   ...db,
-  posts:[],
+  posts:(db.posts||[]).filter(item=>item&&item.id&&item.by&&item.text),
   lostFound:[],
   teams:(db.teams||[]).filter(item=>!SAMPLE_IDS.has(item.id)&&!SAMPLE_USERS.has(item.by)),
   clubEvents:(db.clubEvents||[]).filter(item=>!SAMPLE_IDS.has(item.id)),
@@ -111,9 +111,10 @@ export function SocialProvider({children}){
   const isClubMember=!!user&&clubEmails.includes(user.email)
   const requirePostAccess=()=>{if(!canPost)throw new Error('Verify your student account before creating posts. You can still comment and interact with other users.')}
   const api={me,people,person:u=>people.find(p=>p.uid===u),posts:db.posts,teams:db.teams,conns:connections,clubEvents:db.clubEvents||[],lostFound:db.lostFound||[],commentReports:db.commentReports||[],isClubMember,canPost,postingPermissionError,refreshPostingPermission:loadPostingPermission,
-    addPost:(text,tag)=>{requirePostAccess();upd(d=>{d.posts.unshift({id:rid(),by:me,text,tag,t:Date.now(),likes:[],comments:[]});return d})},
+    addPost:(text,tag)=>{requirePostAccess();upd(d=>{d.posts.unshift({id:rid(),by:me,text,tag,t:Date.now(),likes:[],comments:[],pinned:false});return d})},
     editPost:(id,text,tag)=>upd(d=>{const p=pick(d.posts,id);if(!p||p.by!==me)throw new Error('You can only edit your own post.');p.text=text.trim();p.tag=tag;return d}),
     deletePost:id=>upd(d=>{const index=d.posts.findIndex(p=>p.id===id),p=d.posts[index];if(!p||p.by!==me)throw new Error('You can only delete your own post.');d.posts.splice(index,1);return d}),
+    pinPost:id=>upd(d=>{const post=pick(d.posts,id);if(!post||post.by!==me)throw new Error('You can only pin your own post.');post.pinned=!post.pinned;return d}),
     toggleLike:id=>upd(d=>{const p=pick(d.posts,id);p.likes=p.likes.includes(me)?p.likes.filter(x=>x!==me):[...p.likes,me];return d}),
     addComment:(id,text)=>upd(d=>{pick(d.posts,id).comments.push({id:rid(),by:me,text,t:Date.now()});return d}),
     deleteComment:(surface,itemId,commentId)=>upd(d=>{const list=surface==='post'?d.posts:d.clubEvents;const item=pick(list,itemId);if(!item)return d;const index=item.comments.findIndex((c,i)=>(c.id||`${itemId}-${i}`)===commentId),comment=item.comments[index];if(!comment||comment.by!==me)throw new Error('You can only delete your own comment.');item.comments.splice(index,1);return d}),

@@ -208,6 +208,7 @@ $$;
 grant execute on function public.is_connected_user(uuid) to authenticated;
 drop policy if exists "Users can read their own messages" on public.messages;
 drop policy if exists "Users can send messages as themselves" on public.messages;
+drop policy if exists "Users can unsend their own messages" on public.messages;
 create policy "Users can read their own messages"
 on public.messages for select to authenticated
 using (
@@ -220,6 +221,9 @@ with check (
   auth.uid() = sender_id
   and public.is_connected_user(recipient_id)
 );
+create policy "Users can unsend their own messages"
+on public.messages for delete to authenticated
+using (auth.uid() = sender_id);
 
 do $$
 begin
