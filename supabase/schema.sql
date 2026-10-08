@@ -178,7 +178,8 @@ create policy "Users can delete their own posts"
 on public.posts for delete to authenticated
 using (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
 
-create or replace function public.update_post_comments(p_post_id text, p_comments jsonb)
+drop function if exists public.update_post_comments(text, jsonb);
+create or replace function public.update_post_comments(p_post_id uuid, p_comments jsonb)
 returns void
 language plpgsql
 security definer
@@ -196,8 +197,29 @@ begin
   where id = p_post_id;
 end;
 $$;
-revoke all on function public.update_post_comments(text, jsonb) from public;
-grant execute on function public.update_post_comments(text, jsonb) to authenticated;
+revoke all on function public.update_post_comments(uuid, jsonb) from public;
+grant execute on function public.update_post_comments(uuid, jsonb) to authenticated;
+
+create or replace function public.update_post_likes(p_post_id uuid, p_likes text[])
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+  if not exists (select 1 from public.posts where id = p_post_id) then
+    raise exception 'Post not found';
+  end if;
+  update public.posts
+  set likes = coalesce(p_likes, '{}')
+  where id = p_post_id;
+end;
+$$;
+revoke all on function public.update_post_likes(uuid, text[]) from public;
+grant execute on function public.update_post_likes(uuid, text[]) to authenticated;
 
 do $$
 begin

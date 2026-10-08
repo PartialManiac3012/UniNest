@@ -187,7 +187,17 @@ export function SocialProvider({children}){
       upd(d=>({...d,posts:d.posts.filter(p=>p.id!==id)}))
     },
     pinPost:id=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only pin your own post.');const pinned=!post.pinned;upd(d=>{const p=pick(d.posts,id);if(p)p.pinned=pinned;return d});if(supabase)supabase.from('posts').update({pinned}).eq('id',id).eq('by_uid',me)},
-    toggleLike:id=>upd(d=>{const p=pick(d.posts,id);if(p)p.likes=p.likes.includes(me)?p.likes.filter(x=>x!==me):[...p.likes,me];return d}),
+    toggleLike:async id=>{
+      const post=posts.find(item=>item.id===id)
+      if(!post)return
+      const likes=post.likes.includes(me)?post.likes.filter(x=>x!==me):[...post.likes,me]
+      if(supabase){
+        const {error}=await supabase.rpc('update_post_likes',{p_post_id:id,p_likes:likes})
+        if(error)throw new Error(`Could not save like: ${error.message}`)
+        setRemotePosts(current=>current.map(item=>item.id===id?{...item,likes}:item))
+      }
+      upd(d=>{const p=pick(d.posts,id);if(p)p.likes=likes;return d})
+    },
     addComment:async(id,text)=>{
       const post=posts.find(item=>item.id===id)
       if(!post)throw new Error('This post is no longer available.')
