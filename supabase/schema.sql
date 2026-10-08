@@ -110,6 +110,41 @@ on conflict (id) do update set
   email = excluded.email,
   updated_at = now();
 
+-- Repair foreign keys from older deployments so deleting an Auth user also
+-- removes their profile and user-owned records.
+do $$
+declare
+  fk record;
+  constraint_name text;
+begin
+  for fk in
+    select
+      n.nspname as table_schema,
+      c.relname as table_name,
+      con.conname,
+      pg_get_constraintdef(con.oid) as definition
+    from pg_constraint con
+    join pg_class c on c.oid = con.conrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    join pg_class target on target.oid = con.confrelid
+    join pg_namespace target_schema on target_schema.oid = target.relnamespace
+    where con.contype = 'f'
+      and n.nspname = 'public'
+      and target_schema.nspname = 'auth'
+      and target.relname = 'users'
+      and con.confdeltype <> 'c'
+  loop
+    execute format('alter table %I.%I drop constraint %I', fk.table_schema, fk.table_name, fk.conname);
+    constraint_name := left(fk.conname || '_cascade', 63);
+    execute format(
+      'alter table %I.%I add constraint %I %s on delete cascade',
+      fk.table_schema, fk.table_name, constraint_name,
+      regexp_replace(fk.definition, ' ON DELETE (CASCADE|SET NULL|SET DEFAULT|RESTRICT|NO ACTION)$', '')
+    );
+  end loop;
+end
+$$;
+
 alter table public.profiles enable row level security;
 drop policy if exists "Authenticated users can view profiles" on public.profiles;
 drop policy if exists "Users can create their own profile" on public.profiles;
@@ -434,5 +469,40 @@ begin
   exception
     when duplicate_object then null;
   end;
+end
+$$;
+
+-- Older posts and Lost & Found tables may reference profiles without cascade.
+-- Repair those dependencies after all application tables exist.
+do $$
+declare
+  fk record;
+  constraint_name text;
+begin
+  for fk in
+    select
+      n.nspname as table_schema,
+      c.relname as table_name,
+      con.conname,
+      pg_get_constraintdef(con.oid) as definition
+    from pg_constraint con
+    join pg_class c on c.oid = con.conrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    join pg_class target on target.oid = con.confrelid
+    join pg_namespace target_schema on target_schema.oid = target.relnamespace
+    where con.contype = 'f'
+      and n.nspname = 'public'
+      and target_schema.nspname = 'public'
+      and target.relname = 'profiles'
+      and con.confdeltype <> 'c'
+  loop
+    execute format('alter table %I.%I drop constraint %I', fk.table_schema, fk.table_name, fk.conname);
+    constraint_name := left(fk.conname || '_cascade', 63);
+    execute format(
+      'alter table %I.%I add constraint %I %s on delete cascade',
+      fk.table_schema, fk.table_name, constraint_name,
+      regexp_replace(fk.definition, ' ON DELETE (CASCADE|SET NULL|SET DEFAULT|RESTRICT|NO ACTION)$', '')
+    );
+  end loop;
 end
 $$;
