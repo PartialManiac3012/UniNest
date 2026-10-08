@@ -13,6 +13,7 @@ import LostFound from './pages/LostFound.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
+import TermsConditions from './pages/TermsConditions.jsx'
 export default function App(){
   const guard=el=><RequireAuth>{el}</RequireAuth>
   return <Routes><Route element={<Layout/>}>
@@ -20,6 +21,7 @@ export default function App(){
     <Route path="login" element={<GuestOnly><Login/></GuestOnly>}/>
     <Route path="signup" element={<GuestOnly><Signup/></GuestOnly>}/>
     <Route path="privacy-policy" element={<PrivacyPolicy/>}/>
+    <Route path="terms-and-conditions" element={<TermsConditions/>}/>
     <Route path="feed" element={guard(<Feed/>)}/>
     <Route path="discover" element={guard(<Discover/>)}/>
     <Route path="partners" element={guard(<Partners/>)}/>

@@ -16,6 +16,7 @@ export default function Login(){
       <div><label className="label" htmlFor="pw">Password</label><div className="relative"><input id="pw" type={show?'text':'password'} className="field pr-10" autoComplete="current-password" value={pw} onChange={e=>setPw(e.target.value)} required/>
         <button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)} className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-2"><Icon n={show?'visibility_off':'visibility'}/></button></div></div>
       <label className="flex items-start gap-2 text-sm text-ink-2"><input type="checkbox" className="mt-1 accent-primary-container" checked={accepted} onChange={e=>setAccepted(e.target.checked)} required/><span>I have read and agree to the <Link to="/privacy-policy" className="font-semibold text-primary-container underline underline-offset-4">Privacy Policy</Link>.</span></label>
+      <p className="text-sm text-ink-2">Please also read and agree to the <Link to="/terms-and-conditions" className="font-semibold text-primary-container underline underline-offset-4">Terms &amp; Conditions</Link>.</p>
       <button className="btn-primary w-full" disabled={busy||!id||!pw||!accepted}>{busy?'Logging in…':'Log in'}</button>
     </form>
     <p className="mt-4 text-sm text-ink-2">New here? <Link to="/signup" className="font-semibold text-primary-container underline underline-offset-4">Create your UniNest ID</Link></p>
