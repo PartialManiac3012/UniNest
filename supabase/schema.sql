@@ -135,6 +135,9 @@ create table if not exists public.posts (
 -- Migrate posts tables created by earlier versions of the app.
 -- These columns are added without rewriting or deleting existing posts.
 alter table public.posts add column if not exists by_uid text;
+-- Legacy deployments used the authenticated user's UUID in author_id.
+-- Keep this column available while the app uses by_uid for profile identity.
+alter table public.posts add column if not exists author_id uuid;
 alter table public.posts add column if not exists text text;
 alter table public.posts add column if not exists tag text default 'General';
 alter table public.posts add column if not exists likes text[] default '{}';

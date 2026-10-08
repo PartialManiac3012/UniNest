@@ -154,9 +154,13 @@ export function SocialProvider({children}){
       const post={id:remoteId(),by:me,text,tag,t:Date.now(),likes:[],comments:[],pinned:false}
       if(supabase){
         if(!user?.authId)throw new Error('Your Supabase session is still loading. Please try again.')
-        const {error}=await supabase.from('posts').insert({
+        const payload={
           id:post.id,by_uid:me,text,tag,likes:[],comments:[],pinned:false
-        })
+        }
+        let {error}=await supabase.from('posts').insert(payload)
+        if(error?.message?.includes('author_id')&&error.message.includes('null value')){
+          ({error}=await supabase.from('posts').insert({...payload,author_id:user.authId}))
+        }
         if(error)throw new Error(`Could not publish post: ${error.message}`)
       }
       upd(d=>{d.posts.unshift(post);return d})
