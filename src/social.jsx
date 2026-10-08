@@ -32,6 +32,7 @@ export function SocialProvider({children}){
   const [canPost,setCanPost]=useState(false)
   const [postingPermissionError,setPostingPermissionError]=useState('')
   const [remotePeople,setRemotePeople]=useState([])
+  const [remotePosts,setRemotePosts]=useState([])
   const [remoteProfilesLoaded,setRemoteProfilesLoaded]=useState(!supabase)
   const [messageNotifications,setMessageNotifications]=useState([])
   const [remoteRequests,setRemoteRequests]=useState([])
@@ -41,6 +42,20 @@ export function SocialProvider({children}){
   const [notificationRetry,setNotificationRetry]=useState(0)
   useEffect(()=>{localStorage.setItem(K,JSON.stringify(db))},[db])
   useEffect(()=>{setDb(d=>{const items=d.lostFound||[],active=items.filter(item=>!item.claimed||!item.claimedAt||Date.now()-item.claimedAt<CLAIM_RETENTION);return active.length===items.length?d:{...d,lostFound:active}})},[])
+  useEffect(()=>{
+    if(!supabase||!user?.authId){setRemotePosts([]);return}
+    let active=true
+    const load=async()=>{
+      const {data,error}=await supabase.from('posts').select('*').order('created_at',{ascending:false})
+      if(active&&!error)setRemotePosts((data||[]).map(post=>({
+        ...post,id:post.id,by:post.by_uid,text:post.text,tag:post.tag,t:new Date(post.created_at).getTime(),
+        likes:post.likes||[],comments:post.comments||[],pinned:!!post.pinned
+      })))
+    }
+    load()
+    const channel=supabase.channel(`posts:${user.authId}`).on('postgres_changes',{event:'*',schema:'public',table:'posts'},load).subscribe()
+    return()=>{active=false;supabase.removeChannel(channel)}
+  },[user?.authId])
   const loadPostingPermission=async()=>{
     if(!user){setCanPost(false);setPostingPermissionError('');return false}
     const allowed=isVerifiedEmail(user.email)
@@ -106,17 +121,18 @@ export function SocialProvider({children}){
     return people.find(p=>p.authId===otherId)?.uid
   }).filter(Boolean))
   const connections=[...new Set([...(db.conn[me]||[]),...remoteConnections])]
+  const posts=[...remotePosts,...db.posts].reduce((all,post)=>all.some(item=>item.id===post.id)?all:[...all,post],[])
   const pick=(a,id)=>a.find(x=>x.id===id)
   const clubEmails=['club@uninest.example','ai.club@uninest.example']
   const isClubMember=!!user&&clubEmails.includes(user.email)
   const requirePostAccess=()=>{if(!canPost)throw new Error('Verify your student account before creating posts. You can still comment and interact with other users.')}
-  const api={me,people,person:u=>people.find(p=>p.uid===u),posts:db.posts,teams:db.teams,conns:connections,clubEvents:db.clubEvents||[],lostFound:db.lostFound||[],commentReports:db.commentReports||[],isClubMember,canPost,postingPermissionError,refreshPostingPermission:loadPostingPermission,
-    addPost:(text,tag)=>{requirePostAccess();upd(d=>{d.posts.unshift({id:rid(),by:me,text,tag,t:Date.now(),likes:[],comments:[],pinned:false});return d})},
-    editPost:(id,text,tag)=>upd(d=>{const p=pick(d.posts,id);if(!p||p.by!==me)throw new Error('You can only edit your own post.');p.text=text.trim();p.tag=tag;return d}),
-    deletePost:id=>upd(d=>{const index=d.posts.findIndex(p=>p.id===id),p=d.posts[index];if(!p||p.by!==me)throw new Error('You can only delete your own post.');d.posts.splice(index,1);return d}),
-    pinPost:id=>upd(d=>{const post=pick(d.posts,id);if(!post||post.by!==me)throw new Error('You can only pin your own post.');post.pinned=!post.pinned;return d}),
-    toggleLike:id=>upd(d=>{const p=pick(d.posts,id);p.likes=p.likes.includes(me)?p.likes.filter(x=>x!==me):[...p.likes,me];return d}),
-    addComment:(id,text)=>upd(d=>{pick(d.posts,id).comments.push({id:rid(),by:me,text,t:Date.now()});return d}),
+  const api={me,people,person:u=>people.find(p=>p.uid===u),posts,teams:db.teams,conns:connections,clubEvents:db.clubEvents||[],lostFound:db.lostFound||[],commentReports:db.commentReports||[],isClubMember,canPost,postingPermissionError,refreshPostingPermission:loadPostingPermission,
+    addPost:(text,tag)=>{requirePostAccess();const post={id:rid(),by:me,text,tag,t:Date.now(),likes:[],comments:[],pinned:false};upd(d=>{d.posts.unshift(post);return d});if(supabase&&user?.authId)supabase.from('posts').insert({id:post.id,by_uid:me,text,tag,likes:[],comments:[],pinned:false}).then(({error})=>{if(error)setNotificationError(error.message)})},
+    editPost:(id,text,tag)=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only edit your own post.');upd(d=>{const p=pick(d.posts,id);if(p){p.text=text.trim();p.tag=tag}return d});if(supabase)supabase.from('posts').update({text:text.trim(),tag}).eq('id',id).eq('by_uid',me)},
+    deletePost:id=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only delete your own post.');upd(d=>({...d,posts:d.posts.filter(p=>p.id!==id)}));if(supabase)supabase.from('posts').delete().eq('id',id).eq('by_uid',me)},
+    pinPost:id=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only pin your own post.');const pinned=!post.pinned;upd(d=>{const p=pick(d.posts,id);if(p)p.pinned=pinned;return d});if(supabase)supabase.from('posts').update({pinned}).eq('id',id).eq('by_uid',me)},
+    toggleLike:id=>upd(d=>{const p=pick(d.posts,id);if(p)p.likes=p.likes.includes(me)?p.likes.filter(x=>x!==me):[...p.likes,me];return d}),
+    addComment:(id,text)=>upd(d=>{const p=pick(d.posts,id);if(p)p.comments.push({id:rid(),by:me,text,t:Date.now()});return d}),
     deleteComment:(surface,itemId,commentId)=>upd(d=>{const list=surface==='post'?d.posts:d.clubEvents;const item=pick(list,itemId);if(!item)return d;const index=item.comments.findIndex((c,i)=>(c.id||`${itemId}-${i}`)===commentId),comment=item.comments[index];if(!comment||comment.by!==me)throw new Error('You can only delete your own comment.');item.comments.splice(index,1);return d}),
     adminDeleteComment:(surface,itemId,commentId)=>upd(d=>{const list=surface==='post'?d.posts:d.clubEvents;const item=pick(list,itemId);if(!item)return d;const index=item.comments.findIndex((c,i)=>(c.id||`${itemId}-${i}`)===commentId);if(index>=0)item.comments.splice(index,1);d.commentReports=(d.commentReports||[]).filter(r=>!(r.surface===surface&&r.itemId===itemId&&r.commentId===commentId));return d}),
     reportComment:(surface,itemId,commentId)=>upd(d=>{d.commentReports??=[];if(!d.commentReports.some(r=>r.surface===surface&&r.itemId===itemId&&r.commentId===commentId&&r.by===me))d.commentReports.push({id:rid(),surface,itemId,commentId,by:me,t:Date.now()});return d}),

@@ -121,6 +121,45 @@ on public.profiles for insert to authenticated with check (auth.uid() = id);
 create policy "Users can update their own profile"
 on public.profiles for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
 
+create table if not exists public.posts (
+  id text primary key,
+  by_uid text not null references public.profiles(uid) on delete cascade,
+  text text not null check (char_length(trim(text)) between 1 and 280),
+  tag text not null default 'General',
+  likes text[] not null default '{}',
+  comments jsonb not null default '[]'::jsonb,
+  pinned boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- Migrate posts tables created by earlier versions of the app.
+-- These columns are added without rewriting or deleting existing posts.
+alter table public.posts add column if not exists by_uid text;
+alter table public.posts add column if not exists text text;
+alter table public.posts add column if not exists tag text default 'General';
+alter table public.posts add column if not exists likes text[] default '{}';
+alter table public.posts add column if not exists comments jsonb default '[]'::jsonb;
+alter table public.posts add column if not exists pinned boolean default false;
+alter table public.posts add column if not exists created_at timestamptz default now();
+
+alter table public.posts enable row level security;
+drop policy if exists "Authenticated users can view posts" on public.posts;
+drop policy if exists "Users can create their own posts" on public.posts;
+drop policy if exists "Users can update their own posts" on public.posts;
+drop policy if exists "Users can delete their own posts" on public.posts;
+create policy "Authenticated users can view posts"
+on public.posts for select to authenticated using (true);
+create policy "Users can create their own posts"
+on public.posts for insert to authenticated
+with check (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
+create policy "Users can update their own posts"
+on public.posts for update to authenticated
+using (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()))
+with check (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
+create policy "Users can delete their own posts"
+on public.posts for delete to authenticated
+using (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
+
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   sender_id uuid not null references auth.users(id) on delete cascade,
