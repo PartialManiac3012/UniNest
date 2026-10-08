@@ -173,6 +173,17 @@ create table if not exists public.lost_found (
   claimed_at timestamptz,
   created_at timestamptz not null default now()
 );
+-- Migrate Lost & Found tables created by earlier versions.
+alter table public.lost_found add column if not exists by_uid text;
+alter table public.lost_found add column if not exists type text default 'lost';
+alter table public.lost_found add column if not exists title text default '';
+alter table public.lost_found add column if not exists description text default '';
+alter table public.lost_found add column if not exists location text default '';
+alter table public.lost_found add column if not exists photo text default '';
+alter table public.lost_found add column if not exists claimed boolean default false;
+alter table public.lost_found add column if not exists claim_requests jsonb default '[]'::jsonb;
+alter table public.lost_found add column if not exists claimed_at timestamptz;
+alter table public.lost_found add column if not exists created_at timestamptz default now();
 alter table public.lost_found enable row level security;
 drop policy if exists "Authenticated users can view lost found posts" on public.lost_found;
 drop policy if exists "Users can create their own lost found posts" on public.lost_found;

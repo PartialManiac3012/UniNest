@@ -64,7 +64,9 @@ export function SocialProvider({children}){
     let active=true
     const load=async()=>{
       const {data,error}=await supabase.from('lost_found').select('*').order('created_at',{ascending:false})
-      if(active&&!error)setRemoteLostFound((data||[]).map(item=>({
+      if(!active)return
+      if(error){setNotificationError(`Could not load Lost & Found posts: ${notificationFailure(error)}`);return}
+      setRemoteLostFound((data||[]).map(item=>({
         ...item,id:item.id,by:item.by_uid,created:new Date(item.created_at).getTime(),
         claimRequests:item.claim_requests||[]
       })))
