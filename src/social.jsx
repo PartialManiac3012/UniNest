@@ -29,6 +29,7 @@ export function SocialProvider({children}){
   const [remoteProfilesLoaded,setRemoteProfilesLoaded]=useState(!supabase)
   const [messageNotifications,setMessageNotifications]=useState([])
   const [remoteRequests,setRemoteRequests]=useState([])
+  const [pendingRemoteRequests,setPendingRemoteRequests]=useState(()=>new Set())
   const [notificationError,setNotificationError]=useState('')
   const [notificationRevision,setNotificationRevision]=useState(0)
   useEffect(()=>{localStorage.setItem(K,JSON.stringify(db))},[db])
@@ -111,9 +112,16 @@ export function SocialProvider({children}){
     toggleConnect:async u=>{
       const target=people.find(p=>p.uid===u)
       if(supabase&&user?.authId&&target?.authId){
-        const {error}=await supabase.from('connection_requests').upsert({sender_id:user.authId,recipient_id:target.authId,status:'pending'},{onConflict:'sender_id,recipient_id'})
-        if(error){setNotificationError(error.message);throw new Error(error.message)}
-        setNotificationError('')
+        setPendingRemoteRequests(current=>new Set(current).add(u))
+        try{
+          const {error}=await supabase.from('connection_requests').upsert({sender_id:user.authId,recipient_id:target.authId,status:'pending'},{onConflict:'sender_id,recipient_id'})
+          if(error)throw new Error(error.message)
+          setNotificationError('')
+        }catch(error){
+          setPendingRemoteRequests(current=>{const next=new Set(current);next.delete(u);return next})
+          setNotificationError(error.message)
+          throw error
+        }
         return
       }
       upd(d=>{
@@ -132,6 +140,9 @@ export function SocialProvider({children}){
     },
     connectionStatus:u=>{
       if((db.conn[me]||[]).includes(u))return 'connected'
+      if(pendingRemoteRequests.has(u))return 'requested'
+      if(remoteRequests.some(r=>r.sender_id===user?.authId&&r.recipient_id===people.find(p=>p.uid===u)?.authId&&r.status==='pending'))return 'requested'
+      if(remoteRequests.some(r=>r.sender_id===people.find(p=>p.uid===u)?.authId&&r.recipient_id===user?.authId&&r.status==='pending'))return 'incoming'
       if((db.requests||[]).some(r=>r.from===me&&r.to===u&&r.status==='pending'))return 'requested'
       if((db.requests||[]).some(r=>r.from===u&&r.to===me&&r.status==='pending'))return 'incoming'
       return 'none'
