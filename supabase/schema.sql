@@ -141,6 +141,13 @@ alter table public.posts add column if not exists likes text[] default '{}';
 alter table public.posts add column if not exists comments jsonb default '[]'::jsonb;
 alter table public.posts add column if not exists pinned boolean default false;
 alter table public.posts add column if not exists created_at timestamptz default now();
+update public.posts set
+  tag = coalesce(nullif(tag, ''), 'General'),
+  likes = coalesce(likes, '{}'),
+  comments = coalesce(comments, '[]'::jsonb),
+  pinned = coalesce(pinned, false),
+  created_at = coalesce(created_at, now())
+where tag is null or tag = '' or likes is null or comments is null or pinned is null or created_at is null;
 
 alter table public.posts enable row level security;
 drop policy if exists "Authenticated users can view posts" on public.posts;
@@ -159,6 +166,16 @@ with check (exists (select 1 from public.profiles where uid = by_uid and id = au
 create policy "Users can delete their own posts"
 on public.posts for delete to authenticated
 using (exists (select 1 from public.profiles where uid = by_uid and id = auth.uid()));
+
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.posts;
+  exception
+    when duplicate_object then null;
+  end;
+end
+$$;
 
 create table if not exists public.lost_found (
   id text primary key,

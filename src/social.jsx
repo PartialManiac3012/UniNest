@@ -148,7 +148,19 @@ export function SocialProvider({children}){
   const isClubMember=!!user&&clubEmails.includes(user.email)
   const requirePostAccess=()=>{if(!canPost)throw new Error('Verify your student account before creating posts. You can still comment and interact with other users.')}
   const api={me,people,person:u=>people.find(p=>p.uid===u),posts,teams:db.teams,conns:connections,lostFound,canMessage:u=>connections.includes(u)||claimContacts(u),clubEvents:db.clubEvents||[],commentReports:db.commentReports||[],isClubMember,canPost,postingPermissionError,refreshPostingPermission:loadPostingPermission,
-    addPost:(text,tag)=>{requirePostAccess();const post={id:rid(),by:me,text,tag,t:Date.now(),likes:[],comments:[],pinned:false};upd(d=>{d.posts.unshift(post);return d});if(supabase&&user?.authId)supabase.from('posts').insert({id:post.id,by_uid:me,text,tag,likes:[],comments:[],pinned:false}).then(({error})=>{if(error)setNotificationError(error.message)})},
+    addPost:async(text,tag)=>{
+      requirePostAccess()
+      if(!me)throw new Error('Your profile is still loading. Please try again.')
+      const post={id:rid(),by:me,text,tag,t:Date.now(),likes:[],comments:[],pinned:false}
+      if(supabase){
+        if(!user?.authId)throw new Error('Your Supabase session is still loading. Please try again.')
+        const {error}=await supabase.from('posts').insert({
+          id:post.id,by_uid:me,text,tag,likes:[],comments:[],pinned:false
+        })
+        if(error)throw new Error(`Could not publish post: ${error.message}`)
+      }
+      upd(d=>{d.posts.unshift(post);return d})
+    },
     editPost:(id,text,tag)=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only edit your own post.');upd(d=>{const p=pick(d.posts,id);if(p){p.text=text.trim();p.tag=tag}return d});if(supabase)supabase.from('posts').update({text:text.trim(),tag}).eq('id',id).eq('by_uid',me)},
     deletePost:id=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only delete your own post.');upd(d=>({...d,posts:d.posts.filter(p=>p.id!==id)}));if(supabase)supabase.from('posts').delete().eq('id',id).eq('by_uid',me)},
     pinPost:id=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only pin your own post.');const pinned=!post.pinned;upd(d=>{const p=pick(d.posts,id);if(p)p.pinned=pinned;return d});if(supabase)supabase.from('posts').update({pinned}).eq('id',id).eq('by_uid',me)},
