@@ -3,7 +3,7 @@ import {useAuth} from './auth.jsx'
 import {isVerifiedEmail} from './auth.jsx'
 import {supabase} from './lib/supabase.js'
 // Frontend-only social store (localStorage). Sample students are seeded so the app is not empty.
-const K='uninest.social',H=36e5,CLAIM_RETENTION=7*24*H,rid=()=>Math.random().toString(36).slice(2,9)
+const K='uninest.social',H=36e5,CLAIM_RETENTION=7*24*H,rid=()=>Math.random().toString(36).slice(2,9),remoteId=()=>crypto.randomUUID()
 const SAMPLE_IDS=new Set(['p1','p2','p3','t1','t2','t3','ce1','ce2'])
 const SAMPLE_USERS=new Set(['aditi.v','kartik.s','sneha.p','ananya.s','rohan.m','priyanshu.d'])
 const emptyDb=()=>({posts:[],teams:[],conn:{},requests:[],notifications:[],msgs:[],clubEvents:[],lostFound:[],commentReports:[]})
@@ -151,7 +151,7 @@ export function SocialProvider({children}){
     addPost:async(text,tag)=>{
       requirePostAccess()
       if(!me)throw new Error('Your profile is still loading. Please try again.')
-      const post={id:rid(),by:me,text,tag,t:Date.now(),likes:[],comments:[],pinned:false}
+      const post={id:remoteId(),by:me,text,tag,t:Date.now(),likes:[],comments:[],pinned:false}
       if(supabase){
         if(!user?.authId)throw new Error('Your Supabase session is still loading. Please try again.')
         const {error}=await supabase.from('posts').insert({
@@ -232,7 +232,7 @@ export function SocialProvider({children}){
     joinClubEvent:(id,details)=>upd(d=>{const e=pick(d.clubEvents,id);if(e&&!e.joins.some(x=>x.uid===me))e.joins.push({uid:me,...details,t:Date.now()});return d}),
     addLostFound:async item=>{
       requirePostAccess()
-      const post={id:rid(),by:me,created:Date.now(),claimed:false,claimRequests:[],...item}
+      const post={id:remoteId(),by:me,created:Date.now(),claimed:false,claimRequests:[],...item}
       if(supabase){
         const {error}=await supabase.from('lost_found').insert({
           id:post.id,by_uid:me,type:post.type,title:post.title,description:post.description,
