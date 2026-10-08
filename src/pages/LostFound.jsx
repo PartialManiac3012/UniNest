@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import {Link} from 'react-router-dom'
+import {Link,useNavigate} from 'react-router-dom'
 import {useAuth} from '../auth.jsx'
 import {useSocial} from '../social.jsx'
 import {Avatar,ago} from '../components/ui.jsx'
@@ -28,6 +28,7 @@ const readPhoto=file=>new Promise((resolve,reject)=>{
 export default function LostFound(){
   const {user,isAdmin}=useAuth()
   const {lostFound,person,addLostFound,deleteLostFound,requestLostFoundClaim,claimLostFound,canPost}=useSocial()
+  const navigate=useNavigate()
   const [form,setForm]=useState(empty),[filter,setFilter]=useState('all'),[error,setError]=useState(''),[notice,setNotice]=useState('')
   const update=(key,value)=>setForm({...form,[key]:value})
   const photoChange=async e=>{
@@ -49,8 +50,12 @@ export default function LostFound(){
   const markClaimed=id=>{
     try{claimLostFound(id);setNotice('Marked as claimed. This post will remain visible for seven days before it is automatically removed.')}catch(x){setError(x.message)}
   }
-  const requestClaim=id=>{
-    try{requestLostFoundClaim(id);setNotice('Your claim was sent to the person who found the item. You can message them to coordinate the handoff.')}catch(x){setError(x.message)}
+  const requestClaim=async id=>{
+    try{
+      const finderUid=await requestLostFoundClaim(id)
+      setNotice('Your claim was sent. Opening messages with the person who found it…')
+      navigate(`/messages?to=${encodeURIComponent(finderUid)}`)
+    }catch(x){setError(x.message)}
   }
   const visible=lostFound.filter(item=>filter==='all'||item.type===filter)
   return <div className="space-y-8">

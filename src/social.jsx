@@ -142,11 +142,12 @@ export function SocialProvider({children}){
   const connections=[...new Set([...(db.conn[me]||[]),...remoteConnections])]
   const posts=[...remotePosts,...db.posts].reduce((all,post)=>all.some(item=>item.id===post.id)?all:[...all,post],[])
   const lostFound=[...remoteLostFound,...(db.lostFound||[])].reduce((all,item)=>all.some(existing=>existing.id===item.id)?all:[...all,item],[])
+  const claimContacts=u=>lostFound.some(item=>(item.by===me&&item.claimRequests?.some(request=>request.uid===u))||(item.by===u&&item.claimRequests?.some(request=>request.uid===me)))
   const pick=(a,id)=>a.find(x=>x.id===id)
   const clubEmails=['club@uninest.example','ai.club@uninest.example']
   const isClubMember=!!user&&clubEmails.includes(user.email)
   const requirePostAccess=()=>{if(!canPost)throw new Error('Verify your student account before creating posts. You can still comment and interact with other users.')}
-  const api={me,people,person:u=>people.find(p=>p.uid===u),posts,teams:db.teams,conns:connections,clubEvents:db.clubEvents||[],lostFound,commentReports:db.commentReports||[],isClubMember,canPost,postingPermissionError,refreshPostingPermission:loadPostingPermission,
+  const api={me,people,person:u=>people.find(p=>p.uid===u),posts,teams:db.teams,conns:connections,lostFound,canMessage:u=>connections.includes(u)||claimContacts(u),clubEvents:db.clubEvents||[],commentReports:db.commentReports||[],isClubMember,canPost,postingPermissionError,refreshPostingPermission:loadPostingPermission,
     addPost:(text,tag)=>{requirePostAccess();const post={id:rid(),by:me,text,tag,t:Date.now(),likes:[],comments:[],pinned:false};upd(d=>{d.posts.unshift(post);return d});if(supabase&&user?.authId)supabase.from('posts').insert({id:post.id,by_uid:me,text,tag,likes:[],comments:[],pinned:false}).then(({error})=>{if(error)setNotificationError(error.message)})},
     editPost:(id,text,tag)=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only edit your own post.');upd(d=>{const p=pick(d.posts,id);if(p){p.text=text.trim();p.tag=tag}return d});if(supabase)supabase.from('posts').update({text:text.trim(),tag}).eq('id',id).eq('by_uid',me)},
     deletePost:id=>{const post=posts.find(item=>item.id===id);if(!post||post.by!==me)throw new Error('You can only delete your own post.');upd(d=>({...d,posts:d.posts.filter(p=>p.id!==id)}));if(supabase)supabase.from('posts').delete().eq('id',id).eq('by_uid',me)},
@@ -230,7 +231,18 @@ export function SocialProvider({children}){
       upd(d=>{d.lostFound??=[];d.lostFound.unshift(post);return d})
     },
     deleteLostFound:id=>{const item=lostFound.find(value=>value.id===id);if(!item)return;if(item.by!==me&&!user?.email?.endsWith('@uninest.example'))throw new Error('You can only delete your own Lost & Found post.');upd(d=>({...d,lostFound:d.lostFound.filter(value=>value.id!==id)}));if(supabase)supabase.from('lost_found').delete().eq('id',id).eq('by_uid',me)},
-    requestLostFoundClaim:id=>{const item=lostFound.find(value=>value.id===id);if(!item||item.by===me||item.type!=='found')throw new Error('Only another student can claim a found item.');const requests=[...(item.claimRequests||[]),{uid:me,t:Date.now()}];upd(d=>{const local=pick(d.lostFound,id);if(local)local.claimRequests=requests;return d});if(supabase)supabase.from('lost_found').update({claim_requests:requests}).eq('id',id)},
+    requestLostFoundClaim:async id=>{
+      const item=lostFound.find(value=>value.id===id)
+      if(!item||item.by===me||item.type!=='found')throw new Error('Only another student can claim a found item.')
+      if(item.claimRequests?.some(request=>request.uid===me))return item.by
+      const requests=[...(item.claimRequests||[]),{uid:me,t:Date.now()}]
+      if(supabase){
+        const {error}=await supabase.from('lost_found').update({claim_requests:requests}).eq('id',id)
+        if(error)throw new Error(`Could not send the claim request: ${error.message}`)
+      }
+      upd(d=>{const local=pick(d.lostFound,id);if(local)local.claimRequests=requests;return d})
+      return item.by
+    },
     claimLostFound:id=>{const item=lostFound.find(value=>value.id===id);if(!item||item.by!==me)throw new Error('Only the person who found this item can mark it claimed.');if(!item.claimRequests?.length)throw new Error('Wait for the person who lost this item to submit a claim first.');const claimedAt=Date.now();upd(d=>{const local=pick(d.lostFound,id);if(local){local.claimed=true;local.claimedAt=claimedAt}return d});if(supabase)supabase.from('lost_found').update({claimed:true,claimed_at:new Date(claimedAt).toISOString()}).eq('id',id)},
     shared:p=>p.interests.filter(i=>user?.interests?.includes(i))}
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>}

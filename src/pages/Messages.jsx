@@ -7,7 +7,7 @@ import {Avatar,ago,VerifiedBadge} from '../components/ui.jsx'
 
 export default function Messages(){
   const {user}=useAuth(),s=useSocial(),[sp,setSp]=useSearchParams(),to=sp.get('to'),[text,setText]=useState(''),[messages,setMessages]=useState([]),[error,setError]=useState(''),[sending,setSending]=useState(false),end=useRef(null)
-  const canMessagePerson=p=>!!p&&s.conns.includes(p.uid)
+  const canMessagePerson=p=>!!p&&s.canMessage(p.uid)
   const ids=[...(to?[to]:[]),...s.people.filter(p=>p.uid!==s.me&&p.authId&&canMessagePerson(p)).map(p=>p.uid)].filter((u,i,a)=>a.indexOf(u)===i)
   const requestedPerson=to?s.person(to):null
   const cur=requestedPerson&&canMessagePerson(requestedPerson)?to:ids[0],person=cur?s.person(cur):null

@@ -197,10 +197,7 @@ with check (exists (select 1 from public.profiles where uid = by_uid and id = au
 create policy "Users can update lost found posts"
 on public.lost_found for update to authenticated
 using (
-  exists (select 1 from public.profiles where uid = by_uid and id = auth.uid())
-  or claim_requests @> jsonb_build_array(jsonb_build_object(
-    'uid', (select uid from public.profiles where id = auth.uid())
-  ))
+  true
 )
 with check (
   exists (select 1 from public.profiles where uid = by_uid and id = auth.uid())
@@ -297,6 +294,25 @@ as $$
   );
 $$;
 grant execute on function public.is_connected_user(uuid) to authenticated;
+create or replace function public.is_claim_participant(other_user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.lost_found lf
+    join public.profiles owner_profile on owner_profile.uid = lf.by_uid
+    join public.profiles current_profile on current_profile.id = auth.uid()
+    where (
+      (owner_profile.id = other_user_id and lf.claim_requests @> jsonb_build_array(jsonb_build_object('uid', current_profile.uid)))
+      or
+      (owner_profile.id = auth.uid() and lf.claim_requests @> jsonb_build_array(jsonb_build_object('uid', (select uid from public.profiles where id = other_user_id))))
+    )
+  );
+$$;
+grant execute on function public.is_claim_participant(uuid) to authenticated;
 drop policy if exists "Users can read their own messages" on public.messages;
 drop policy if exists "Users can send messages as themselves" on public.messages;
 drop policy if exists "Users can unsend their own messages" on public.messages;
@@ -304,13 +320,16 @@ create policy "Users can read their own messages"
 on public.messages for select to authenticated
 using (
   (auth.uid() = sender_id or auth.uid() = recipient_id)
-  and public.is_connected_user(case when auth.uid() = sender_id then recipient_id else sender_id end)
+  and (
+    public.is_connected_user(case when auth.uid() = sender_id then recipient_id else sender_id end)
+    or public.is_claim_participant(case when auth.uid() = sender_id then recipient_id else sender_id end)
+  )
 );
 create policy "Users can send messages as themselves"
 on public.messages for insert to authenticated
 with check (
   auth.uid() = sender_id
-  and public.is_connected_user(recipient_id)
+  and (public.is_connected_user(recipient_id) or public.is_claim_participant(recipient_id))
 );
 create policy "Users can unsend their own messages"
 on public.messages for delete to authenticated
