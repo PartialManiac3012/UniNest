@@ -254,7 +254,9 @@ export function SocialProvider({children}){
     disconnect:async u=>{
     const target=people.find(p=>p.uid===u)
     if(supabase&&user?.authId&&target?.authId){
-      const request=remoteRequests.find(r=>r.status==='accepted'&&(
+      const request=remoteRequests.find(r=>(r.status==='accepted'||(
+        r.status==='pending'&&r.sender_id===user.authId
+      ))&&(
         (r.sender_id===user.authId&&r.recipient_id===target.authId)||
         (r.sender_id===target.authId&&r.recipient_id===user.authId)
       ))
@@ -263,11 +265,20 @@ export function SocialProvider({children}){
         if(error)throw new Error(`Could not disconnect: ${error.message}`)
         setRemoteRequests(current=>current.filter(item=>item.id!==request.id))
       }
+      setPendingRemoteRequests(current=>{
+        const next=new Set(current)
+        next.delete(u)
+        return next
+      })
       return
     }
     upd(d=>{
       d.conn[me]=(d.conn[me]||[]).filter(id=>id!==u)
       d.conn[u]=(d.conn[u]||[]).filter(id=>id!==me)
+      d.requests=(d.requests||[]).filter(request=>!(
+        (request.from===me&&request.to===u&&request.status==='pending')||
+        (request.from===u&&request.to===me&&request.status==='pending')
+      ))
       return d
     })
     },
