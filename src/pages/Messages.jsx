@@ -20,17 +20,53 @@ export default function Messages(){
     let active=true
     setError('')
     const convId=[user.authId,person.authId].sort().join('_')
-    const q=query(collection(db,'messages'),where('conversation_id','==',convId))
-    const unsubscribe=onSnapshot(q,snapshot=>{
+
+    let sentList=[]
+    let receivedList=[]
+
+    const updateCombined=()=>{
       if(!active)return
-      const list=snapshot.docs
-        .map(d=>({id:d.id,...d.data()}))
-        .sort((a,b)=>new Date(a.created_at).getTime()-new Date(b.created_at).getTime())
-      setMessages(list)
+      const map=new Map()
+      for(const m of sentList){
+        if(m.conversation_id===convId||m.recipient_id===person.authId){
+          map.set(m.id,m)
+        }
+      }
+      for(const m of receivedList){
+        if(m.conversation_id===convId||m.sender_id===person.authId){
+          map.set(m.id,m)
+        }
+      }
+      const sorted=Array.from(map.values()).sort(
+        (a,b)=>new Date(a.created_at).getTime()-new Date(b.created_at).getTime()
+      )
+      setMessages(sorted)
+    }
+
+    const qSent=query(collection(db,'messages'),where('sender_id','==',user.authId))
+    const qReceived=query(collection(db,'messages'),where('recipient_id','==',user.authId))
+
+    const unsubSent=onSnapshot(qSent,snapshot=>{
+      if(!active)return
+      sentList=snapshot.docs.map(d=>({id:d.id,...d.data()}))
+      updateCombined()
     },loadError=>{
       if(active)setError(loadError.message)
     })
-    return()=>{active=false;unsubscribe()}
+
+    const unsubReceived=onSnapshot(qReceived,snapshot=>{
+      if(!active)return
+      receivedList=snapshot.docs.map(d=>({id:d.id,...d.data()}))
+      updateCombined()
+    },loadError=>{
+      if(active)setError(loadError.message)
+    })
+
+    return()=>{
+      active=false
+      unsubSent()
+      unsubReceived()
+    }
   },[user?.authId,person?.authId])
 
   const unsend=async id=>{
@@ -49,7 +85,7 @@ export default function Messages(){
     if(!db){setError('Firebase is not configured.');return}
     if(!user?.authId){setError('Your Firebase session is missing. Log out and log in again.');return}
     if(!person?.authId){setError('This profile is not synced with Firebase yet. Ask this user to log in once through UniNest, then refresh Discover before messaging.');return}
-    if(!s.conns.includes(person.uid)){setError('Accept the connection request before messaging this user.');return}
+    if(!s.canMessage(person.uid)){setError('Accept the connection request before messaging this user.');return}
     setError('')
     setSending(true)
     try{
@@ -58,6 +94,7 @@ export default function Messages(){
         conversation_id:convId,
         sender_id:user.authId,
         recipient_id:person.authId,
+        participants:[user.authId,person.authId],
         body,
         created_at:new Date().toISOString()
       })
