@@ -5,9 +5,10 @@ import {useSocial} from '../social.jsx'
 import {collection,addDoc,deleteDoc,doc,query,where,onSnapshot} from 'firebase/firestore'
 import {db} from '../lib/firebase.js'
 import {Avatar,ago,VerifiedBadge} from '../components/ui.jsx'
+import {Icon} from '../components/Layout.jsx'
 
 export default function Messages(){
-  const {user}=useAuth(),s=useSocial(),[sp,setSp]=useSearchParams(),to=sp.get('to'),[text,setText]=useState(''),[messages,setMessages]=useState([]),[error,setError]=useState(''),[sending,setSending]=useState(false),end=useRef(null)
+  const {user}=useAuth(),s=useSocial(),[sp,setSp]=useSearchParams(),to=sp.get('to'),[text,setText]=useState(''),[messages,setMessages]=useState([]),[error,setError]=useState(''),[sending,setSending]=useState(false),[deletingId,setDeletingId]=useState(null),end=useRef(null)
   const canMessagePerson=p=>!!p&&s.canMessage(p.uid)
   const ids=[...(to?[to]:[]),...s.people.filter(p=>p.uid!==s.me&&p.authId&&canMessagePerson(p)).map(p=>p.uid)].filter((u,i,a)=>a.indexOf(u)===i)
   const requestedPerson=to?s.person(to):null
@@ -71,11 +72,20 @@ export default function Messages(){
 
   const unsend=async id=>{
     if(!window.confirm('Unsend this message?'))return
+    setError('')
+    setDeletingId(id)
     try{
       await deleteDoc(doc(db,'messages',id))
       setMessages(current=>current.filter(message=>message.id!==id))
     }catch(deleteError){
-      setError(deleteError.message)
+      const isPermission = deleteError?.code==='permission-denied'||deleteError?.message?.toLowerCase().includes('permission')
+      if(isPermission){
+        setError("Could not unsend: Firebase delete permission denied. Please publish the updated rules in your Firebase Console (Firestore -> Rules).")
+      }else{
+        setError(deleteError.message||'Could not unsend message.')
+      }
+    }finally{
+      setDeletingId(null)
     }
   }
 
@@ -111,7 +121,28 @@ export default function Messages(){
    <div className="panel grid min-h-[28rem] overflow-hidden md:grid-cols-[14rem_1fr]">
     <ul className="border-b border-outline-variant md:border-b-0 md:border-r">{ids.map(u=>{const p=s.person(u);return <li key={u}><button onClick={()=>setSp({to:u})} aria-current={u===cur} className={`flex w-full items-center gap-2 px-3 py-3 text-left text-sm ${u===cur?'bg-primary-wash':'hover:bg-surface-high'}`}><Avatar p={p} size={32}/>{p.name}<VerifiedBadge verified={p.verified}/></button></li>})}</ul>
     {person?<div className="flex flex-col"><div className="border-b border-outline-variant p-3 text-sm font-semibold">{person.name}<VerifiedBadge verified={person.verified}/></div>
-     <div className="flex-1 space-y-2 overflow-y-auto p-4" aria-live="polite">{error&&<p role="alert" className="text-sm text-error">{error}</p>}{!messages.length&&!error&&<p className="text-sm text-ink-2">Say hello to {person.name.split(' ')[0]}.</p>}{messages.map(m=><div key={m.id} className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${m.sender_id===user.authId?'ml-auto bg-primary-container text-surface':'bg-surface-high'}`}>{m.body}<div className="flex items-center justify-end gap-2 text-[10px] opacity-70"><span>{ago(m.created_at)}</span>{m.sender_id===user.authId&&<button type="button" className="underline" onClick={()=>unsend(m.id)}>Unsend</button>}</div></div>)}<div ref={end}/></div>
+     <div className="flex-1 space-y-2 overflow-y-auto p-4" aria-live="polite">
+      {error&&<div role="alert" className="flex items-center justify-between gap-2 rounded bg-error/10 p-2 text-xs text-error"><span>{error}</span><button type="button" onClick={()=>setError('')} className="font-bold hover:underline" aria-label="Dismiss">✕</button></div>}
+      {!messages.length&&!error&&<p className="text-sm text-ink-2">Say hello to {person.name.split(' ')[0]}.</p>}
+      {messages.map(m=><div key={m.id} className={`group relative max-w-[80%] rounded-lg px-3 py-2 text-sm ${m.sender_id===user.authId?'ml-auto bg-primary-container text-surface':'bg-surface-high'}`}>
+        <div className="break-words">{m.body}</div>
+        <div className="mt-1 flex items-center justify-end gap-2 text-[10px] opacity-75">
+          <span>{ago(m.created_at)}</span>
+          {m.sender_id===user.authId&&(
+            <button
+              type="button"
+              onClick={()=>unsend(m.id)}
+              disabled={deletingId===m.id}
+              className="inline-flex items-center gap-0.5 underline hover:opacity-100 disabled:opacity-40"
+              title="Unsend this message"
+            >
+              {deletingId===m.id?'Unsending…':<><Icon n="delete" className="!text-[12px]"/><span>Unsend</span></>}
+            </button>
+          )}
+        </div>
+      </div>)}
+      <div ref={end}/>
+     </div>
      <form onSubmit={send} className="flex gap-2 border-t border-outline-variant p-3"><input className="field" aria-label="Message" placeholder="Write a message" value={text} onChange={e=>setText(e.target.value)}/><button className="btn-primary" disabled={!text.trim()||sending}>{sending?'Sending…':'Send'}</button></form></div>:<p className="p-6 text-sm text-ink-2">Select a conversation.</p>}</div>}
    <p className="text-xs text-ink-2">Messages are securely stored in Firebase and update in real time.</p></>
 }

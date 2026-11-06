@@ -45,7 +45,7 @@ service cloud.firestore {
         (resource.data.participants != null && request.auth.uid in resource.data.participants)
       );
       allow create: if isAuthenticated() && request.resource.data.sender_id == request.auth.uid;
-      allow delete: if isAuthenticated() && resource.data.sender_id == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.sender_id == request.auth.uid;
     }
 
     // Connection Requests
