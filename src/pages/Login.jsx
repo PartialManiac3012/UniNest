@@ -11,7 +11,7 @@ export default function Login(){
     <h1 className="text-4xl">Log in to UniNest</h1>
     <p className="mt-2 text-ink-2">Use the email or UniNest ID you signed up with.</p>
     <form onSubmit={submit} className="panel mt-6 space-y-4 p-6" noValidate>
-      {err&&<p role="alert" className="rounded border border-error bg-error-wash p-3 text-sm text-error">{err}</p>}
+      {err&&<p role="alert" className="rounded-2xl border border-error bg-error-wash p-3 text-sm text-error">{err}</p>}
       <div><label className="label" htmlFor="id">Email or UniNest ID</label><input id="id" className="field" autoComplete="username" value={id} onChange={e=>setId(e.target.value)} required/></div>
       <div><label className="label" htmlFor="pw">Password</label><div className="relative"><input id="pw" type={show?'text':'password'} className="field pr-10" autoComplete="current-password" value={pw} onChange={e=>setPw(e.target.value)} required/>
         <button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)} className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-2"><Icon n={show?'visibility_off':'visibility'}/></button></div></div>

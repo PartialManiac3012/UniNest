@@ -13,7 +13,7 @@ export default function Events(){
    <p className="mt-3 max-w-2xl text-ink-2 leading-7">Upcoming tech symposiums, inter-collegiate hackathons, and chartered club assemblies.</p></div>
   <div className="lg:col-span-4 panel p-4 text-center"><div className="kicker">Registration closes in</div><div className="mt-1 font-serif text-2xl tabular-nums text-primary-container" role="timer">{clock}</div></div></header>
  <div className="rule-double"/>
- <div className="card p-4 flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded bg-primary-wash font-bold text-primary-container">CO</span>
+ <div className="card p-4 flex flex-wrap items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-primary-wash font-bold text-primary-container">CO</span>
   <span className="flex-1 min-w-[200px]"><b className="font-serif text-lg">Coding & Open Source Society</b> <span className="pill-green ml-1">Chartered guild</span><br/><span className="text-xs text-ink-2">2,418 enrolled engineers and mentors</span></span>
   <button aria-pressed={follow} onClick={()=>setFollow(!follow)} className={follow?'btn-outline':'btn-primary'}><Icon n={follow?'check':'person_add'}/>{follow?'Following':'Follow society'}</button></div>
  <section className="grid gap-6 lg:grid-cols-12"><div className="lg:col-span-8 panel p-6">

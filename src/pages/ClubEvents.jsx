@@ -28,8 +28,8 @@ export default function ClubEvents(){
   }
   return <div className="space-y-8">
     <header><span className="pill">Club events</span><h1 className="mt-3 text-4xl md:text-5xl">Events by registered clubs</h1><p className="mt-3 max-w-2xl leading-7 text-ink-2">Discover campus events, discuss them with other students, and submit your details to join.</p></header>
-    {notice&&<p role="status" className="rounded border border-secondary bg-secondary/10 p-3 text-sm">{notice}</p>}
-    {error&&<p role="alert" className="rounded border border-error bg-error-wash p-3 text-sm text-error">{error}</p>}
+    {notice&&<p role="status" className="rounded-2xl border border-secondary bg-secondary/10 p-3 text-sm">{notice}</p>}
+    {error&&<p role="alert" className="rounded-2xl border border-error bg-error-wash p-3 text-sm text-error">{error}</p>}
     {isClubMember&&s.canPost?<section className="panel p-6"><h2 className="text-2xl">Publish a club event</h2><p className="mt-1 text-sm text-ink-2">Your registered club email is authorized to publish.</p>
       <form onSubmit={publish} className="mt-4 grid gap-4 sm:grid-cols-2">
         <input className="field" placeholder="Event title" value={draft.title} onChange={e=>update('title',e.target.value)} required/>
@@ -45,7 +45,7 @@ export default function ClubEvents(){
         <p className="mt-3 leading-6 text-ink-2">{event.description}</p><p className="mt-3 text-sm"><b>Venue:</b> {event.venue}</p>
         <button className="btn-primary mt-4 w-full" onClick={()=>{setJoin(event);setError('')}}>Join event</button>
         <div className="mt-5 border-t border-outline-variant pt-4"><h3 className="text-lg">Comments</h3>
-          <div className="mt-3 space-y-2">{event.comments.map((c,i)=><p key={c.id||i} className="rounded bg-surface-low p-2 text-sm"><b>@{c.by}</b> {c.text}<span className="ml-3 text-xs text-ink-2"><button onClick={()=>s.reportComment('event',event.id,c.id||`${event.id}-${i}`)} className="hover:text-error">Report</button>{isAdmin&&<button onClick={()=>s.adminDeleteComment('event',event.id,c.id||`${event.id}-${i}`)} className="ml-2 hover:text-error">Delete</button>}</span></p>)}</div>
+          <div className="mt-3 space-y-2">{event.comments.map((c,i)=><p key={c.id||i} className="rounded-2xl bg-surface-low p-3 text-sm"><b>@{c.by}</b> {c.text}<span className="ml-3 text-xs text-ink-2"><button onClick={()=>s.reportComment('event',event.id,c.id||`${event.id}-${i}`)} className="hover:text-error">Report</button>{isAdmin&&<button onClick={()=>s.adminDeleteComment('event',event.id,c.id||`${event.id}-${i}`)} className="ml-2 hover:text-error">Delete</button>}</span></p>)}</div>
           <form onSubmit={e=>submitComment(e,event.id)} className="mt-3 flex gap-2"><input className="field" placeholder="Add a comment" value={comment[event.id]||''} onChange={e=>setComment({...comment,[event.id]:e.target.value})}/><button className="btn-outline">Post</button></form>
         </div>
       </article>)}

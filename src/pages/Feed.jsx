@@ -29,7 +29,7 @@ export default function Feed(){
      <textarea id="np" maxLength={280} rows={3} className="field" placeholder="What are you building or looking for?" value={t} onChange={e=>setT(e.target.value)}/>
      <div className="mt-2 flex flex-wrap items-center gap-3"><select aria-label="Topic" className="field !w-auto" value={tag} onChange={e=>setTag(e.target.value)}>{['General',...mi].map(x=><option key={x}>{x}</option>)}</select><span className="text-xs text-ink-2">{t.length}/280</span><button className="btn-primary ml-auto" disabled={!t.trim()}>Post</button></div></form>
     :<div className="panel p-4 text-sm text-ink-2">Only students verified with an <b>@sudoon.ac.in</b> email can create posts. You can still comment, like, connect, and message other users.</div>}
-    {error&&<p role="alert" className="rounded border border-error bg-error-wash p-3 text-sm text-error">{error}</p>}
+    {error&&<p role="alert" className="rounded-2xl border border-error bg-error-wash p-3 text-sm text-error">{error}</p>}
     <div className="flex gap-2"><Chip on={!mine} onClick={()=>setMine(false)}>Everyone</Chip><Chip on={mine} onClick={()=>setMine(true)}>My interests & connections</Chip></div>
     {!posts.length&&<p className="panel p-6 text-center">Nothing here yet. Connect with people in Discover or post the first update.</p>}
     {posts.sort((a,b)=>b.t-a.t).map(p=><Post key={p.id} p={p}/>)}</section>

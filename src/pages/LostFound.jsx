@@ -85,8 +85,8 @@ export default function LostFound(){
 
   return <div className="space-y-8">
     <header><span className="pill">Campus help desk</span><h1 className="mt-3 text-4xl md:text-5xl">Lost & found</h1><p className="mt-3 max-w-2xl leading-7 text-ink-2">Post something you lost or found on campus. Message the poster to arrange a safe handoff.</p></header>
-    {notice&&<p role="status" className="rounded border border-secondary bg-secondary/10 p-3 text-sm">{notice}</p>}
-    {error&&<p role="alert" className="rounded border border-error bg-error-wash p-3 text-sm text-error">{error}</p>}
+    {notice&&<p role="status" className="rounded-2xl border border-secondary bg-secondary/10 p-3 text-sm">{notice}</p>}
+    {error&&<p role="alert" className="rounded-2xl border border-error bg-error-wash p-3 text-sm text-error">{error}</p>}
     {canPost?<section className="panel p-6"><h2 className="text-2xl">Create a post</h2><p className="mt-1 text-sm text-ink-2">Post lost or found items on campus.</p>
       <form onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2">
         <select className="field" value={form.type} onChange={e=>update('type',e.target.value)}><option value="lost">I lost something</option><option value="found">I found something</option></select>
@@ -94,7 +94,7 @@ export default function LostFound(){
         <input className="field sm:col-span-2" placeholder="Last seen or found location" value={form.location} onChange={e=>update('location',e.target.value)} required/>
         <textarea className="field sm:col-span-2" rows="3" placeholder="Describe the item and useful identifying details" value={form.description} onChange={e=>update('description',e.target.value)} required/>
         <div className="sm:col-span-2"><label className="label" htmlFor="lost-photo">Photo (optional)</label><input id="lost-photo" type="file" accept="image/*" className="block text-sm" onChange={photoChange}/>
-          {form.photo&&<div className="mt-3 flex items-center gap-3"><img src={form.photo} alt="Item preview" className="h-24 w-24 rounded object-cover border border-outline-variant"/><button type="button" className="text-sm underline underline-offset-4 text-error" onClick={removePhoto}>Remove photo</button></div>}
+          {form.photo&&<div className="mt-3 flex items-center gap-3"><img src={form.photo} alt="Item preview" className="h-24 w-24 rounded-2xl object-cover border border-outline-variant"/><button type="button" className="text-sm underline underline-offset-4 text-error" onClick={removePhoto}>Remove photo</button></div>}
           {photoUploading&&<p className="text-xs text-primary-container mt-1">Processing photo…</p>}
         </div>
         <button className="btn-primary sm:col-span-2" disabled={busy||photoUploading}>{busy?'Publishing post…':'Publish post'}</button>
