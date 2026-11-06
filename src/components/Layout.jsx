@@ -45,22 +45,22 @@ export default function Layout(){
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-surface text-ink transition-colors duration-200">
       {/* Desktop Left Sidebar (like Instagram) */}
-      <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 md:left-0 border-r border-outline-variant bg-surface z-40 p-4 justify-between select-none">
-        <div className="flex flex-col space-y-6">
-          <div className="px-3 py-2">
+      <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 md:left-0 border-r border-outline-variant bg-surface z-40 p-3 select-none overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <div className="flex flex-col space-y-4">
+          <div className="px-3 py-1">
             <Link to="/" className="flex items-center gap-3">
               <img src="/WEB%20LOGO.png" alt="UniNest" className="h-10 w-28 object-contain dark:brightness-125" />
               <span className="sr-only">UniNest</span>
             </Link>
           </div>
 
-          <nav className="flex-1 space-y-1.5" aria-label="Campus navigation">
+          <nav className="flex-1 space-y-1" aria-label="Campus navigation">
             {nav.map(([to,label,icon])=>(
               <NavLink
                 key={to}
                 to={to}
                 end={to==='/'}
-                className={({isActive})=>`flex items-center gap-4 rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${isActive?'bg-primary-container text-white shadow-sm':'text-ink-2 hover:bg-surface-low hover:text-primary-container'}`}
+                className={({isActive})=>`flex items-center gap-3.5 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all ${isActive?'bg-primary-container text-white shadow-sm':'text-ink-2 hover:bg-surface-low hover:text-primary-container'}`}
               >
                 <Icon n={icon} className="text-2xl"/>
                 <span className="truncate">{label}</span>
@@ -74,7 +74,7 @@ export default function Layout(){
                   type="button"
                   onClick={()=>setNoticeOpen(!noticeOpen)}
                   aria-expanded={noticeOpen}
-                  className={`flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${noticeOpen?'bg-primary-wash text-primary-container font-bold':'text-ink-2 hover:bg-surface-low hover:text-primary-container'}`}
+                  className={`flex w-full items-center gap-3.5 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all ${noticeOpen?'bg-primary-wash text-primary-container font-bold':'text-ink-2 hover:bg-surface-low hover:text-primary-container'}`}
                 >
                   <div className="relative flex items-center justify-center">
                     <Icon n="notifications" className="text-2xl"/>
@@ -91,7 +91,7 @@ export default function Layout(){
                   <div
                     role="dialog"
                     aria-label="Notifications"
-                    className="absolute left-full top-0 ml-3 z-50 w-[360px] rounded-2xl border border-outline-variant bg-surface shadow-2xl overflow-hidden"
+                    className="fixed left-64 top-12 ml-3 z-50 w-[360px] rounded-2xl border border-outline-variant bg-surface shadow-2xl overflow-hidden"
                   >
                     <header className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant px-4 py-3">
                       <h2 className="text-lg font-semibold">Notifications</h2>
@@ -147,21 +147,21 @@ export default function Layout(){
         </div>
 
         {/* Bottom Area: Dark Mode & Profile */}
-        <div className="border-t border-outline-variant/60 pt-3 space-y-2">
+        <div className="mt-auto shrink-0 border-t border-outline-variant/60 pt-3 pb-2 space-y-1.5">
           <button
             type="button"
             onClick={()=>setDark(!dark)}
             aria-label={dark?'Switch to light mode':'Switch to dark mode'}
-            className="flex w-full items-center gap-4 rounded-2xl px-4 py-2.5 text-sm font-semibold text-ink-2 hover:bg-surface-low hover:text-primary-container transition-all"
+            className="flex w-full items-center gap-3.5 rounded-2xl px-3.5 py-2 text-sm font-semibold text-ink-2 hover:bg-surface-low hover:text-primary-container transition-all"
           >
             <Icon n={dark?'light_mode':'dark_mode'} className="text-2xl"/>
             <span>{dark?'Light mode':'Dark mode'}</span>
           </button>
 
           {user?(
-            <div className="pt-2">
-              <Link to={`/u/${user.uid}`} className="flex items-center gap-3 rounded-2xl p-2.5 hover:bg-surface-low transition">
-                <Avatar p={user} size={38}/>
+            <div className="pt-1">
+              <Link to={`/u/${user.uid}`} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-surface-low transition">
+                <Avatar p={user} size={36}/>
                 <div className="min-w-0 flex-1 leading-tight">
                   <div className="truncate text-xs font-semibold">{user.name}<VerifiedBadge verified={user.verified}/></div>
                   <div className="truncate text-[11px] text-ink-2">@{user.uid}</div>
@@ -175,7 +175,7 @@ export default function Layout(){
               </button>
             </div>
           ):(
-            <div className="pt-2 space-y-2">
+            <div className="pt-1 space-y-1.5">
               <Link to="/login" className="flex w-full items-center justify-center rounded-full border border-primary-container text-primary-container hover:bg-primary-wash py-2 text-sm font-semibold transition">
                 Log in
               </Link>

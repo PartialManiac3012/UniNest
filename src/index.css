@@ -72,3 +72,24 @@
   .field{@apply w-full rounded-2xl border border-outline-variant bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-outline focus:border-primary-container text-ink transition-colors focus:ring-1 focus:ring-primary-container}
   .label{@apply mb-1 block text-xs font-semibold text-ink-2}
 }
+
+/* Custom sleek scrollbar utility */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--outline) / 0.45) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(var(--outline) / 0.45);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--outline) / 0.75);
+}
+
