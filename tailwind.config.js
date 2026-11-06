@@ -1,13 +1,29 @@
 export default {
   content: ['./index.html','./src/**/*.{js,jsx}'],
+  darkMode: 'class',
   theme: { extend: {
     colors: {
-      surface:'#fdf8f5','surface-dim':'#ddd9d6','surface-lowest':'#ffffff','surface-low':'#f7f3ef',
-      'surface-container':'#f2ede9','surface-high':'#ece7e4','surface-highest':'#e6e2de',
-      ink:'#1c1b19','ink-2':'#554240',outline:'#887270','outline-variant':'#dbc0be',
-      primary:'#611816','primary-container':'#7f2e2a','primary-wash':'#ffdad6',
-      secondary:'#3a6753','secondary-wash':'#bceed3',tertiary:'#5e4500','gold':'#f0c04d','gold-wash':'#ffdf9d',
-      error:'#ba1a1a','error-wash':'#ffdad6'
+      surface: 'rgb(var(--surface) / <alpha-value>)',
+      'surface-dim': 'rgb(var(--surface-dim) / <alpha-value>)',
+      'surface-lowest': 'rgb(var(--surface-lowest) / <alpha-value>)',
+      'surface-low': 'rgb(var(--surface-low) / <alpha-value>)',
+      'surface-container': 'rgb(var(--surface-container) / <alpha-value>)',
+      'surface-high': 'rgb(var(--surface-high) / <alpha-value>)',
+      'surface-highest': 'rgb(var(--surface-highest) / <alpha-value>)',
+      ink: 'rgb(var(--ink) / <alpha-value>)',
+      'ink-2': 'rgb(var(--ink-2) / <alpha-value>)',
+      outline: 'rgb(var(--outline) / <alpha-value>)',
+      'outline-variant': 'rgb(var(--outline-variant) / <alpha-value>)',
+      primary: 'rgb(var(--primary) / <alpha-value>)',
+      'primary-container': 'rgb(var(--primary-container) / <alpha-value>)',
+      'primary-wash': 'rgb(var(--primary-wash) / <alpha-value>)',
+      secondary: 'rgb(var(--secondary) / <alpha-value>)',
+      'secondary-wash': 'rgb(var(--secondary-wash) / <alpha-value>)',
+      tertiary: 'rgb(var(--tertiary) / <alpha-value>)',
+      gold: 'rgb(var(--gold) / <alpha-value>)',
+      'gold-wash': 'rgb(var(--gold-wash) / <alpha-value>)',
+      error: 'rgb(var(--error) / <alpha-value>)',
+      'error-wash': 'rgb(var(--error-wash) / <alpha-value>)'
     },
     fontFamily: { serif:['Newsreader','Georgia','serif'], sans:['Inter','system-ui','sans-serif'] },
     borderRadius: { DEFAULT:'0.25rem', lg:'0.5rem' }
